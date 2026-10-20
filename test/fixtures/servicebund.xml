@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <title>Ausschreibungen</title>
+    <item>
+      <title>Trockenbauarbeiten Sanierung Gymnasium am Park</title>
+      <link>https://www.service.bund.de/IMPORTE/Ausschreibungen/eVergabe/2026/10/123456.html?nn=4641482#ankerA</link>
+      <guid>https://www.service.bund.de/IMPORTE/Ausschreibungen/eVergabe/2026/10/123456.html</guid>
+      <pubDate>Fri, 16 Oct 2026 10:15:00 +0200</pubDate>
+      <description><![CDATA[Vergabestelle: Landkreis Beispiel<br />Erfüllungsort: 72764 Reutlingen<br />Angebotsfrist: 12.11.2026<br />Ausschreibungsart: Öffentliche Ausschreibung]]></description>
+    </item>
+    <item>
+      <title>Beabsichtigte Vergabe: Fassadengerüst Rathaus</title>
+      <link>https://www.service.bund.de/IMPORTE/Ausschreibungen/2026/10/999.html</link>
+      <pubDate>Thu, 15 Oct 2026 08:00:00 +0200</pubDate>
+      <description><![CDATA[Vergabestelle: Gemeinde Testdorf &amp; Partner<br />Erfüllungsort: Testdorf]]></description>
+    </item>
+  </channel>
+</rss>

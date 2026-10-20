@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Vergaberadar</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="kopf">
+    <div>
+      <h1>Vergaberadar</h1>
+      <p id="firma" class="leise"></p>
+    </div>
+    <div class="aktionen">
+      <span id="lauf-meldung" class="leise"></span>
+      <button id="btn-suchlauf" class="btn primaer">Suchlauf starten</button>
+    </div>
+  </header>
+
+  <section class="kacheln">
+    <div class="kachel"><span id="k-relevant">–</span><small>passend (ab 60 Punkte)</small></div>
+    <div class="kachel"><span id="k-offen">–</span><small>offene Ausschreibungen</small></div>
+    <div class="kachel"><span id="k-neu">–</span><small>heute neu</small></div>
+    <div class="kachel"><span id="k-lauf">–</span><small>letzter Suchlauf</small></div>
+  </section>
+
+  <nav class="reiter">
+    <button class="reiter-btn aktiv" data-reiter="liste">Ausschreibungen</button>
+    <button class="reiter-btn" data-reiter="laeufe">Suchläufe</button>
+    <button class="reiter-btn" data-reiter="einstellungen">Einstellungen</button>
+  </nav>
+
+  <main>
+    <section id="reiter-liste">
+      <form id="filter" class="filter">
+        <input name="suche" type="search" placeholder="Suchbegriff, Ort, Auftraggeber">
+        <select name="gewerk">
+          <option value="">Alle Gewerke</option>
+          <option value="putz_stuck">Stuck &amp; Putz</option>
+          <option value="wdvs">WDVS &amp; Fassade</option>
+          <option value="trockenbau">Trockenbau</option>
+          <option value="geruest">Gerüstbau</option>
+        </select>
+        <label>ab <input name="minPunkte" type="number" min="0" max="100" step="5" value="20"> Punkte</label>
+        <label>bis <input name="maxKm" type="number" min="0" step="10" placeholder="∞"> km</label>
+        <select name="status">
+          <option value="">Jeder Status</option>
+          <option value="neu">Neu</option>
+          <option value="interessant">Interessant</option>
+          <option value="angeboten">Angebot abgegeben</option>
+          <option value="abgelehnt">Abgelehnt</option>
+        </select>
+        <select name="sort">
+          <option value="punkte">Sortieren: Punkte</option>
+          <option value="frist">Sortieren: Frist</option>
+          <option value="entfernung">Sortieren: Entfernung</option>
+          <option value="neu">Sortieren: Neueste</option>
+        </select>
+        <label class="haken"><input name="alle" type="checkbox" value="1"> auch abgelaufene</label>
+      </form>
+      <p id="treffer" class="leise"></p>
+      <div id="liste" class="liste"></div>
+      <div class="seiten"><button id="mehr" class="btn hidden">Weitere laden</button></div>
+    </section>
+
+    <section id="reiter-laeufe" class="hidden">
+      <table class="tabelle">
+        <thead><tr><th>Gestartet</th><th>Status</th><th>Ergebnis je Quelle</th></tr></thead>
+        <tbody id="laeufe"></tbody>
+      </table>
+    </section>
+
+    <section id="reiter-einstellungen" class="hidden">
+      <div class="karte">
+        <h2>Aktuelle Einstellungen</h2>
+        <dl id="einstellungen" class="kv"></dl>
+        <p class="leise">Geändert werden die Einstellungen in der Datei <code>.env</code> im Programmordner (danach Vergaberadar neu starten). Die Suchbegriffe je Gewerk stehen in <code>gewerke.json</code>.</p>
+        <div class="aktionen">
+          <button id="btn-neu-bewerten" class="btn">Alle neu bewerten</button>
+          <button id="btn-testmail" class="btn">Testmail senden</button>
+        </div>
+        <p id="einst-meldung" class="leise"></p>
+      </div>
+    </section>
+  </main>
+
+  <dialog id="detail">
+    <div id="detail-inhalt"></div>
+  </dialog>
+
+  <script src="app.js"></script>
+</body>
+</html>

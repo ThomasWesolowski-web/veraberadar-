@@ -30,6 +30,8 @@ Zum Vergleich geprüft: `KWB-R/kwb.tenders` (Stand 23.06.2026)
 
 Empfehlung: Weg 1 anfragen und parallel mit Weg 2 beginnen. Teile, die wir nach Weg 2 selbst schreiben, bleiben in jedem Fall unser eigenes Werk.
 
+**Entscheidung (20.10.2026):** Weg 1 + 2. Der Vergaberadar wird als eigene Basis mit Bausteinen aus kwb.tenders gebaut, beim Autor von tender-crawler wird eine Lizenz angefragt.
+
 ## 3. Architektur tender-crawler
 
 ```
