@@ -1,0 +1,26 @@
+{
+  "name": "vergaberadar",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Ausschreibungsradar für Stuckateur-, Putz-, WDVS-, Trockenbau- und Gerüstbauarbeiten",
+  "type": "module",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node --disable-warning=ExperimentalWarning src/server.js",
+    "suchlauf": "node --disable-warning=ExperimentalWarning src/cli.js suchlauf",
+    "testmail": "node --disable-warning=ExperimentalWarning src/cli.js testmail",
+    "test": "node --disable-warning=ExperimentalWarning --test test/*.test.js"
+  },
+  "engines": {
+    "node": ">=22.13"
+  },
+  "dependencies": {
+    "@fastify/static": "^10.1.6",
+    "fast-xml-parser": "^5.11.2",
+    "fastify": "^5.12.7",
+    "fflate": "^0.8.3",
+    "node-cron": "^4.6.0",
+    "nodemailer": "^10.1.7",
+    "pdf-parse": "^2.4.5"
+  }
+}

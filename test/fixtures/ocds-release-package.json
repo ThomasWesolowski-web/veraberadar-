@@ -1,0 +1,33 @@
+{
+  "uri": "https://oeffentlichevergabe.de/example",
+  "version": "1.1",
+  "releases": [
+    {
+      "ocid": "ocds-abc123-0001",
+      "id": "4f1c7a2e-1111-2222-3333-444455556666",
+      "date": "2026-10-16T09:00:00+02:00",
+      "tag": ["tender"],
+      "buyer": { "id": "ORG-1", "name": "Universitätsbauamt Beispielstadt" },
+      "parties": [
+        { "id": "ORG-1", "name": "Universitätsbauamt Beispielstadt", "roles": ["buyer"], "address": { "postalCode": "89073", "locality": "Ulm", "countryName": "Deutschland" } }
+      ],
+      "tender": {
+        "title": "WDVS-Arbeiten und Fassadensanierung Institutsgebäude",
+        "description": "Wärmedämmverbundsystem ca. 1.800 m², Gerüstarbeiten bauseits.",
+        "classification": { "scheme": "CPV", "id": "45321000" },
+        "items": [ { "id": "1", "classification": { "scheme": "CPV", "id": "45443000" }, "deliveryAddresses": [ { "postalCode": "89081", "locality": "Ulm-Lehr", "region": "DE144" } ] } ],
+        "lots": [ { "id": "LOT-1", "tenderPeriod": { "endDate": "2026-11-25T10:00:00+01:00" } } ],
+        "documents": [ { "id": "d1", "documentType": "biddingDocuments", "url": "https://vergabe.example.de/projekt/889/unterlagen.zip" } ]
+      }
+    },
+    {
+      "ocid": "ocds-abc123-0002",
+      "id": "aaaa-bbbb",
+      "date": "2026-10-16T10:00:00+02:00",
+      "tag": ["award"],
+      "parties": [ { "id": "X", "name": "Gemeinde Irgendwo", "roles": ["buyer"], "address": { "locality": "Irgendwo" } } ],
+      "tender": { "title": "Lieferung von Büromaterial" }
+    },
+    { "ocid": "ohne-titel", "id": "zzz", "tender": {} }
+  ]
+}

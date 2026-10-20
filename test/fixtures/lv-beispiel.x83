@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<GAEB xmlns="http://www.gaeb.de/GAEB_DA_XML/DA83/3.3">
+  <GAEBInfo><Version>3.3</Version><ProgSystem>Testdatei</ProgSystem></GAEBInfo>
+  <PrjInfo><NamePrj>KITA-01</NamePrj><LblPrj>Neubau Kita Sonnenschein</LblPrj></PrjInfo>
+  <Award>
+    <DP>83</DP>
+    <BoQ>
+      <BoQInfo><Name>LV 01</Name><LblBoQ>Putz- und Stuckarbeiten</LblBoQ></BoQInfo>
+      <BoQBody>
+        <BoQCtgy RNoPart="01">
+          <LblTx><p><span>Innenputz</span></p></LblTx>
+          <BoQBody>
+            <Itemlist>
+              <Item RNoPart="0010">
+                <Qty>1250.000</Qty><QU>m2</QU>
+                <Description><CompleteText>
+                  <DetailTxt><Text><p><span>Kalk-Zement-Innenputz, einlagig, Dicke 15 mm, geglättet.</span></p></Text></DetailTxt>
+                  <OutlineText><OutlTxt><TextOutlTxt><p><span>Kalkzementputz innen</span></p></TextOutlTxt></OutlTxt></OutlineText>
+                </CompleteText></Description>
+              </Item>
+              <Item RNoPart="0020">
+                <Qty>85.5</Qty><QU>m</QU>
+                <Description><CompleteText>
+                  <OutlineText><OutlTxt><TextOutlTxt><p><span>Kantenschutzprofil</span></p></TextOutlTxt></OutlTxt></OutlineText>
+                </CompleteText></Description>
+              </Item>
+            </Itemlist>
+          </BoQBody>
+        </BoQCtgy>
+        <BoQCtgy RNoPart="02">
+          <LblTx><p><span>Baustelleneinrichtung</span></p></LblTx>
+          <BoQBody>
+            <Itemlist>
+              <Item RNoPart="0010">
+                <Qty>1</Qty><QU>psch</QU>
+                <Description><CompleteText><OutlineText><OutlTxt><TextOutlTxt><p><span>Baustelle einrichten und räumen</span></p></TextOutlTxt></OutlTxt></OutlineText></CompleteText></Description>
+              </Item>
+            </Itemlist>
+          </BoQBody>
+        </BoQCtgy>
+      </BoQBody>
+    </BoQ>
+  </Award>
+</GAEB>

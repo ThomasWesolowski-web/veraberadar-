@@ -1,0 +1,27 @@
+{
+  "notices": [
+    {
+      "publication-number": "612345-2026",
+      "notice-title": { "deu": "Deutschland – Putzarbeiten – Innen- und Außenputzarbeiten Neubau Kita Sonnenschein" },
+      "notice-type": "cn-standard",
+      "publication-date": ["2026-10-15+02:00"],
+      "description-proc": { "deu": "Ausführung von Innenputz (ca. 2.400 m²) und Außenputz inkl. Gerüststellung." },
+      "buyer-name": { "deu": ["Stadt Musterstadt, Hochbauamt"] },
+      "buyer-city": { "deu": ["Musterstadt"] },
+      "buyer-post-code": ["70173"],
+      "classification-cpv": ["45410000", "45262100", "45410000"],
+      "deadline-receipt-tender-date-lot": ["2026-11-20+01:00"],
+      "place-of-performance": ["DE111", "DEU"],
+      "document-url-lot": ["https://vergabe.example.de/unterlagen/4711"],
+      "links": { "html": { "DEU": "https://ted.europa.eu/de/notice/-/detail/612345-2026" }, "pdf": { "DEU": "https://ted.europa.eu/de/notice/612345-2026/pdf" } }
+    },
+    {
+      "publication-number": "612999-2026",
+      "notice-title": { "eng": "Germany – Scaffolding work – Award" },
+      "notice-type": "can-standard",
+      "publication-date": ["2026-10-14+02:00"],
+      "classification-cpv": ["45262100"]
+    }
+  ],
+  "totalNoticeCount": 2
+}

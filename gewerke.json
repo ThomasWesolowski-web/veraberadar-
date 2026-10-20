@@ -1,0 +1,31 @@
+{
+  "_hinweis": "Suchbegriffe und CPV-Codes je Gewerk. Groß-/Kleinschreibung und Umlaute (ä/ae) spielen keine Rolle. 'stark' = eindeutiger Treffer, 'unterstuetzend' = Hinweis. Änderungen wirken beim nächsten Suchlauf.",
+  "gewerke": {
+    "putz_stuck": {
+      "name": "Stuck & Putz",
+      "stark": ["Stuckateur", "Stuckarbeiten", "Stuck", "Putzarbeiten", "Innenputz", "Außenputz", "Fassadenputz", "Kalkputz", "Gipsputz", "Lehmputz", "Sanierputz", "Edelputz", "Oberputz", "Unterputz", "Verputzarbeiten", "Putzsanierung", "Stuckrestaurierung", "Stuckprofile"],
+      "unterstuetzend": ["Putz", "Spachtel", "Glätte", "Armierung", "Laibung", "Rabitz", "Putzträger", "Feuchteschutz", "Altbausanierung", "Denkmal"],
+      "cpv": ["45410000", "45451000", "45453100"]
+    },
+    "wdvs": {
+      "name": "WDVS & Fassade",
+      "stark": ["WDVS", "Wärmedämmverbundsystem", "Wärmedämmverbund", "Fassadendämmung", "Außendämmung", "Fassadensanierung", "Wärmedämmarbeiten", "Dämmputz", "energetische Fassadensanierung", "Vollwärmeschutz"],
+      "unterstuetzend": ["Fassade", "Dämmung", "Wärmedämmung", "energetische Sanierung", "Mineralwolle", "EPS", "Holzfaser", "Sockeldämmung", "Perimeterdämmung"],
+      "cpv": ["45321000", "45443000", "45262650"]
+    },
+    "trockenbau": {
+      "name": "Trockenbau",
+      "stark": ["Trockenbau", "Trockenbauarbeiten", "Gipskarton", "Gipsfaser", "Ständerwand", "Metallständerwand", "abgehängte Decke", "abgehängte Decken", "Unterdecke", "Unterdecken", "Akustikdecke", "Montagewand", "Trennwände", "Brandschutzbekleidung", "Vorsatzschale"],
+      "unterstuetzend": ["Decke", "Akustik", "Brandschutz", "Innenausbau", "Ausbau", "Schallschutz", "Revisionsöffnung", "Estrich"],
+      "cpv": ["45421141", "45421146", "45421152", "45324000", "45421140"]
+    },
+    "geruest": {
+      "name": "Gerüstbau",
+      "stark": ["Gerüstbau", "Gerüstarbeiten", "Gerüststellung", "Fassadengerüst", "Arbeitsgerüst", "Schutzgerüst", "Raumgerüst", "Traggerüst", "Gerüstvorhaltung"],
+      "unterstuetzend": ["Gerüst", "Einrüstung", "Hängegerüst", "Fanggerüst"],
+      "cpv": ["45262100", "45262110", "45262120"]
+    }
+  },
+  "cpv_allgemein_bau": ["45400000", "45450000", "45453000", "45262000", "45260000", "45210000"],
+  "ausschluss": ["Planungsleistungen", "Architektenleistungen", "Ingenieurleistungen", "Objektplanung", "Tragwerksplanung", "Fachplanung", "Projektsteuerung", "Gutachten", "Lieferung von", "Leasing", "Reinigungsleistungen", "Gebäudereinigung", "Software", "Straßenbau", "Tiefbau", "Kanalbau", "Elektroinstallation", "Lüftungsanlage", "Heizungsanlage", "Sanitärinstallation", "Aufzug", "Dachabdichtung", "Pflasterarbeiten"]
+}
