@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>XRechnung-Generator</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<header class="topbar">
+  <div>
+    <h1>XRechnung-Generator</h1>
+    <p class="sub">E-Rechnung nach XRechnung 3.0 (EN 16931, UBL 2.1) · Import aus PDF oder XML · Prüfung nach § 14 UStG</p>
+  </div>
+  <div class="top-actions">
+    <button type="button" id="btn-new" class="ghost">Neue Rechnung</button>
+    <button type="button" id="btn-save-master" class="ghost" title="Eigene Firmen-, Kontakt- und Bankdaten im Browser speichern">Meine Stammdaten speichern</button>
+  </div>
+</header>
+
+<main class="layout">
+  <section class="form-col">
+
+    <!-- 1 Import -->
+    <section class="card">
+      <h2><span class="step">1</span> Import (optional)</h2>
+      <label id="dropzone" class="dropzone" for="file-input">
+        <input type="file" id="file-input" accept=".pdf,.xml,application/pdf,application/xml,text/xml" hidden>
+        <strong>PDF- oder XML-Rechnung hierher ziehen</strong>
+        <span>oder klicken zum Auswählen</span>
+        <small>PDF: Text wird ausgelesen; enthaltene ZUGFeRD/Factur-X-Daten werden direkt übernommen. XML: XRechnung (UBL/CII) oder ZUGFeRD.<br>
+        Alle Daten bleiben in Ihrem Browser – es wird nichts hochgeladen.</small>
+      </label>
+      <div id="import-result" class="import-result" hidden></div>
+      <label class="check" id="attach-row" hidden>
+        <input type="checkbox" id="attach-pdf" checked>
+        Original-PDF als Anlage in die XRechnung einbetten (BT-125)
+      </label>
+    </section>
+
+    <!-- 2 Rechnungskopf -->
+    <section class="card">
+      <h2><span class="step">2</span> Rechnungsdaten</h2>
+      <div class="grid">
+        <label>Rechnungsart (BT-3)
+          <select data-bind="type" id="sel-type"></select></label>
+        <label>Rechnungsnummer* (BT-1)
+          <input data-bind="number" placeholder="z. B. RE-2026-0042"></label>
+        <label>Rechnungsdatum* (BT-2)
+          <input type="date" data-bind="issueDate"></label>
+        <label>Fällig am (BT-9)
+          <input type="date" data-bind="dueDate"></label>
+        <label>Währung (BT-5)
+          <input data-bind="currency" maxlength="3"></label>
+        <label>Käuferreferenz / Leitweg-ID* (BT-10)
+          <input data-bind="buyerReference" placeholder="Leitweg-ID oder Bestell-/Kostenstellen-Nr."></label>
+        <label>Bestellnummer (BT-13)
+          <input data-bind="orderReference"></label>
+        <label>Vertragsnummer (BT-12)
+          <input data-bind="contractReference"></label>
+        <label>Projektnummer (BT-11)
+          <input data-bind="projectReference"></label>
+      </div>
+      <div class="grid" id="preceding-box">
+        <label>Bezug auf Rechnung Nr. (BT-25)
+          <input data-bind="precedingInvoiceNumber"></label>
+        <label>vom (BT-26)
+          <input type="date" data-bind="precedingInvoiceDate"></label>
+      </div>
+      <h3>Liefer-/Leistungszeitpunkt* <small>(§ 14 Abs. 4 Nr. 6 UStG – Datum <em>oder</em> Zeitraum)</small></h3>
+      <div class="grid">
+        <label>Liefer-/Leistungsdatum (BT-72)
+          <input type="date" data-bind="deliveryDate"></label>
+        <label>Leistungszeitraum von (BT-73)
+          <input type="date" data-bind="periodStart"></label>
+        <label>bis (BT-74)
+          <input type="date" data-bind="periodEnd"></label>
+      </div>
+      <label class="full">Bemerkung (BT-22)
+        <textarea data-bind="note" rows="2"></textarea></label>
+    </section>
+
+    <!-- 3 Verkäufer -->
+    <section class="card">
+      <h2><span class="step">3</span> Verkäufer (Ihr Unternehmen)</h2>
+      <div class="grid">
+        <label class="span2">Firmenname* (BT-27)
+          <input data-bind="seller.name"></label>
+        <label>Handelsname (BT-28)
+          <input data-bind="seller.tradingName"></label>
+        <label class="span2">Straße und Hausnummer* (BT-35)
+          <input data-bind="seller.street"></label>
+        <label>Adresszusatz (BT-36)
+          <input data-bind="seller.additionalStreet"></label>
+        <label>PLZ* (BT-38)
+          <input data-bind="seller.zip"></label>
+        <label>Ort* (BT-37)
+          <input data-bind="seller.city"></label>
+        <label>Land* (BT-40)
+          <input data-bind="seller.country" maxlength="2"></label>
+        <label>USt-IdNr. (BT-31)
+          <input data-bind="seller.vatId" placeholder="DE123456789"></label>
+        <label>Steuernummer (BT-32)
+          <input data-bind="seller.taxNumber" placeholder="12/345/67890"></label>
+        <label>Handelsregister-Nr. (BT-30)
+          <input data-bind="seller.registrationId" placeholder="HRB 12345"></label>
+        <label class="span2">Rechtliche Zusatzinfos (BT-33)
+          <input data-bind="seller.legalInfo" placeholder="z. B. GmbH, Sitz Köln, Geschäftsführer: …"></label>
+        <label>Adressschema (BT-34-1)
+          <select data-bind="seller.endpointScheme" class="sel-eas"></select></label>
+        <label class="span2">Elektronische Adresse* (BT-34)
+          <input data-bind="seller.endpoint" placeholder="rechnung@ihre-firma.de"></label>
+      </div>
+      <h3>Ansprechpartner* <small>(BG-6, in XRechnung Pflicht)</small></h3>
+      <div class="grid">
+        <label>Name* (BT-41)
+          <input data-bind="seller.contactName"></label>
+        <label>Telefon* (BT-42)
+          <input data-bind="seller.contactPhone"></label>
+        <label>E-Mail* (BT-43)
+          <input data-bind="seller.contactEmail"></label>
+      </div>
+    </section>
+
+    <!-- 4 Käufer -->
+    <section class="card">
+      <h2><span class="step">4</span> Käufer (Rechnungsempfänger)</h2>
+      <div class="grid">
+        <label class="span2">Name / Firma* (BT-44)
+          <input data-bind="buyer.name"></label>
+        <label>Kundennummer (BT-46)
+          <input data-bind="buyer.id"></label>
+        <label class="span2">Straße und Hausnummer* (BT-50)
+          <input data-bind="buyer.street"></label>
+        <label>Adresszusatz (BT-51)
+          <input data-bind="buyer.additionalStreet"></label>
+        <label>PLZ* (BT-53)
+          <input data-bind="buyer.zip"></label>
+        <label>Ort* (BT-52)
+          <input data-bind="buyer.city"></label>
+        <label>Land* (BT-55)
+          <input data-bind="buyer.country" maxlength="2"></label>
+        <label>USt-IdNr. (BT-48)
+          <input data-bind="buyer.vatId"></label>
+        <label>Adressschema (BT-49-1)
+          <select data-bind="buyer.endpointScheme" class="sel-eas"></select></label>
+        <label>Elektronische Adresse* (BT-49)
+          <input data-bind="buyer.endpoint" placeholder="E-Mail oder Leitweg-ID"></label>
+        <label>Ansprechpartner (BT-56)
+          <input data-bind="buyer.contactName"></label>
+        <label>E-Mail Ansprechpartner (BT-58)
+          <input data-bind="buyer.contactEmail"></label>
+      </div>
+      <details>
+        <summary>Abweichende Lieferanschrift (BG-15)</summary>
+        <div class="grid">
+          <label class="span2">Name (BT-70)
+            <input data-bind="delivery.name"></label>
+          <label>Straße (BT-75)
+            <input data-bind="delivery.street"></label>
+          <label>PLZ (BT-78)
+            <input data-bind="delivery.zip"></label>
+          <label>Ort (BT-77)
+            <input data-bind="delivery.city"></label>
+          <label>Land (BT-80)
+            <input data-bind="delivery.country" maxlength="2"></label>
+        </div>
+      </details>
+    </section>
+
+    <!-- 5 Positionen -->
+    <section class="card">
+      <h2><span class="step">5</span> Positionen</h2>
+      <div class="table-wrap">
+        <table class="lines">
+          <thead>
+            <tr>
+              <th>#</th><th>Bezeichnung* / Beschreibung</th><th>Menge*</th><th>Einheit</th>
+              <th>Einzelpreis netto</th><th>USt-Kategorie</th><th>USt %</th><th class="num">Netto</th><th></th>
+            </tr>
+          </thead>
+          <tbody id="lines-body"></tbody>
+        </table>
+      </div>
+      <button type="button" id="btn-add-line" class="ghost">+ Position hinzufügen</button>
+      <div id="exemptions"></div>
+    </section>
+
+    <!-- 6 Zahlung -->
+    <section class="card">
+      <h2><span class="step">6</span> Zahlung</h2>
+      <div class="grid">
+        <label>Zahlungsart* (BT-81)
+          <select data-bind="payment.code" id="sel-payment"></select></label>
+        <label>Verwendungszweck (BT-83)
+          <input data-bind="payment.reference"></label>
+        <label>Bereits gezahlt (BT-113)
+          <input type="number" step="0.01" data-bind="prepaid" data-type="number"></label>
+      </div>
+      <div class="grid pay pay-58 pay-30">
+        <label class="span2">IBAN* (BT-84)
+          <input data-bind="payment.iban" placeholder="DE.. .... .... .... .... .."></label>
+        <label>BIC (BT-86)
+          <input data-bind="payment.bic"></label>
+        <label>Kontoinhaber (BT-85)
+          <input data-bind="payment.accountName"></label>
+      </div>
+      <div class="grid pay pay-59">
+        <label>Mandatsreferenz* (BT-89)
+          <input data-bind="payment.mandateId"></label>
+        <label>Gläubiger-ID* (BT-90)
+          <input data-bind="payment.creditorId"></label>
+        <label>IBAN des Zahlers* (BT-91)
+          <input data-bind="payment.debitedIban"></label>
+      </div>
+      <div class="grid pay pay-54 pay-55">
+        <label>Letzte 4–6 Ziffern der Karte* (BT-87)
+          <input data-bind="payment.cardNumber" maxlength="6"></label>
+        <label>Karteninhaber (BT-88)
+          <input data-bind="payment.cardHolder"></label>
+      </div>
+      <div class="grid">
+        <label class="span2">Zahlungsbedingungen (BT-20)
+          <textarea data-bind="payment.terms" rows="2" placeholder="z. B. Zahlbar innerhalb von 14 Tagen ohne Abzug."></textarea></label>
+        <label>Skonto: Tage
+          <input type="number" min="0" data-bind="payment.skontoDays"></label>
+        <label>Skonto: Prozent
+          <input type="number" step="0.01" min="0" data-bind="payment.skontoPercent"></label>
+      </div>
+    </section>
+  </section>
+
+  <!-- rechte Spalte -->
+  <aside class="side-col">
+    <section class="card sticky">
+      <h2>Summen</h2>
+      <div id="totals"></div>
+      <h2>Prüfung</h2>
+      <div id="status" class="status"></div>
+      <ul id="findings" class="findings"></ul>
+      <div class="export">
+        <button type="button" id="btn-download" class="primary">XRechnung herunterladen (XML)</button>
+        <button type="button" id="btn-preview" class="ghost">XML anzeigen</button>
+        <button type="button" id="btn-report" class="ghost">Prüfbericht herunterladen</button>
+      </div>
+      <p class="hint">Die Prüfung bildet § 14 UStG sowie die wichtigsten EN-16931- und XRechnung-Regeln (BR-DE) nach.
+        Für die verbindliche Prüfung empfiehlt sich zusätzlich der offizielle
+        <a href="https://github.com/itplr-kosit/validator-configuration-xrechnung" target="_blank" rel="noopener">KoSIT-Validator</a>.
+        <a href="docs/ANFORDERUNGEN.md" target="_blank">Rechtliche Anforderungen</a></p>
+    </section>
+  </aside>
+</main>
+
+<dialog id="xml-dialog">
+  <div class="dialog-head">
+    <strong>XRechnung (UBL 2.1)</strong>
+    <div>
+      <button type="button" id="btn-copy" class="ghost">Kopieren</button>
+      <button type="button" id="btn-close-dialog" class="ghost">Schließen</button>
+    </div>
+  </div>
+  <pre id="xml-output"></pre>
+</dialog>
+
+<script type="module" src="js/app.js"></script>
+</body>
+</html>
