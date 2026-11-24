@@ -2,37 +2,12 @@
 // 1. Eingebettete E-Rechnung (ZUGFeRD / Factur-X / XRechnung) wird bevorzugt übernommen.
 // 2. Sonst wird der Text extrahiert und heuristisch ausgewertet.
 import * as pdfjsLib from '../vendor/pdfjs/pdf.min.mjs';
-import { parseInvoiceText } from './pdf-text.js';
+import { parseInvoiceText, itemsToLines } from './pdf-text.js';
 import { importXml } from './xml-import.js';
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = new URL('../vendor/pdfjs/pdf.worker.min.mjs', import.meta.url).href;
 
 const EMBEDDED_NAMES = /^(factur-x|zugferd-invoice|zugferd_invoice|xrechnung|order-x)\.xml$/i;
-
-/** Rekonstruiert Textzeilen aus pdf.js-Textelementen anhand der y-Position. */
-function itemsToLines(items) {
-  const rows = [];
-  for (const it of items) {
-    if (!it.str || !it.str.trim()) continue;
-    const x = it.transform[4];
-    const y = it.transform[5];
-    let row = rows.find((r) => Math.abs(r.y - y) < Math.max(2, (it.height || 10) * 0.4));
-    if (!row) { row = { y, parts: [] }; rows.push(row); }
-    row.parts.push({ x, str: it.str, w: it.width || 0 });
-  }
-  rows.sort((a, b) => b.y - a.y);
-  return rows.map((r) => {
-    r.parts.sort((a, b) => a.x - b.x);
-    let line = '';
-    let lastEnd = null;
-    for (const p of r.parts) {
-      if (lastEnd !== null && p.x - lastEnd > 1) line += ' ';
-      line += p.str;
-      lastEnd = p.x + p.w;
-    }
-    return line.replace(/\s+/g, ' ').trim();
-  });
-}
 
 export function bytesToBase64(bytes) {
   let bin = '';
@@ -82,7 +57,8 @@ export async function importPdf(buffer, filename) {
   for (let i = 1; i <= pdf.numPages; i++) {
     const page = await pdf.getPage(i);
     const content = await page.getTextContent();
-    allLines.push(...itemsToLines(content.items));
+    const { width } = page.getViewport({ scale: 1 });
+    allLines.push(...itemsToLines(content.items, width));
   }
   const text = allLines.join('\n');
   if (text.replace(/\s/g, '').length < 30) {

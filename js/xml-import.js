@@ -1,5 +1,5 @@
 // Import bestehender E-Rechnungen: XRechnung/UBL sowie ZUGFeRD/Factur-X/XRechnung im CII-Format
-import { emptyInvoice, emptyLine, emptyParty, UNITS } from './model.js';
+import { emptyInvoice, emptyLine, emptyParty, emptyAllowance, UNITS } from './model.js';
 
 // --- kleine, namespace-unabhängige DOM-Helfer ------------------------------
 function kids(node, name) {
@@ -97,10 +97,11 @@ function splitTerms(inv, note) {
   const lines = String(note || '').split(/\r?\n/);
   const rest = [];
   for (const l of lines) {
-    const m = /^#SKONTO#TAGE=(\d+)#PROZENT=(\d+\.\d{2})#/.exec(l.trim());
+    const m = /^#SKONTO#TAGE=(\d+)#PROZENT=(\d+\.\d{2})(?:#BASISBETRAG=(-?\d+\.\d{2}))?#/.exec(l.trim());
     if (m && inv.payment.skontoDays === '') {
       inv.payment.skontoDays = m[1];
       inv.payment.skontoPercent = m[2];
+      inv.payment.skontoBase = m[3] || '';
     } else if (l.trim()) rest.push(l);
   }
   inv.payment.terms = rest.join('\n');
@@ -161,6 +162,16 @@ function importUbl(root) {
     const code = txt(sub, 'TaxCategory/TaxExemptionReasonCode');
     if (reason || code) inv.exemptions[cat] = { reason, code };
   }
+
+  inv.allowances = kids(root, 'AllowanceCharge').map((ac) => {
+    const a = emptyAllowance(txt(ac, 'ChargeIndicator') === 'true');
+    a.reason = txt(ac, 'AllowanceChargeReason') || txt(ac, 'AllowanceChargeReasonCode') || a.reason;
+    a.percent = txt(ac, 'MultiplierFactorNumeric');
+    a.amount = Number(txt(ac, 'Amount')) || 0;
+    a.vatCategory = txt(ac, 'TaxCategory/ID') || 'S';
+    a.vatRate = Number(txt(ac, 'TaxCategory/Percent')) || 0;
+    return a;
+  });
 
   const lineNodes = findAll(root, isCN ? 'CreditNoteLine' : 'InvoiceLine');
   inv.lines = lineNodes.map((ln) => {
@@ -287,6 +298,16 @@ function importCii(root) {
     const code = txt(tax, 'ExemptionReasonCode');
     if (reason || code) inv.exemptions[cat] = { reason, code };
   }
+
+  inv.allowances = kids(set, 'SpecifiedTradeAllowanceCharge').map((ac) => {
+    const a = emptyAllowance(txt(ac, 'ChargeIndicator/Indicator') === 'true');
+    a.reason = txt(ac, 'Reason') || txt(ac, 'ReasonCode') || a.reason;
+    a.percent = txt(ac, 'CalculationPercent');
+    a.amount = Number(txt(ac, 'ActualAmount')) || 0;
+    a.vatCategory = txt(ac, 'CategoryTradeTax/CategoryCode') || 'S';
+    a.vatRate = Number(txt(ac, 'CategoryTradeTax/RateApplicablePercent')) || 0;
+    return a;
+  });
 
   inv.lines = findAll(tx, 'IncludedSupplyChainTradeLineItem').map((li) => {
     const l = emptyLine();

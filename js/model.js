@@ -96,6 +96,11 @@ export function emptyLine() {
   };
 }
 
+/** Rabatt (BG-20) bzw. Zuschlag (BG-21) auf Rechnungsebene */
+export function emptyAllowance(charge = false) {
+  return { charge, reason: charge ? 'Zuschlag' : 'Rabatt', percent: '', amount: 0, vatCategory: 'S', vatRate: 19 };
+}
+
 export function emptyInvoice() {
   const today = new Date().toISOString().slice(0, 10);
   return {
@@ -120,11 +125,12 @@ export function emptyInvoice() {
     payment: {
       code: '58', iban: '', bic: '', accountName: '', reference: '',
       mandateId: '', creditorId: '', debitedIban: '', cardNumber: '', cardHolder: '',
-      terms: '', skontoDays: '', skontoPercent: '',
+      terms: '', skontoDays: '', skontoPercent: '', skontoBase: '',
     },
     prepaid: 0,
     exemptions: {},
     lines: [emptyLine()],
+    allowances: [],
     attachment: null, // { filename, mimeCode, base64, description }
   };
 }
@@ -162,6 +168,24 @@ export function computeTotals(inv) {
     const g = groups.get(key);
     g.taxable = round2(g.taxable + net);
   }
+  // Rabatte/Zuschläge auf Rechnungsebene: Basis ist die Positionssumme der jeweiligen Steuergruppe
+  let allowanceTotal = 0;
+  let chargeTotal = 0;
+  const allowances = (inv.allowances || []).map((a) => {
+    const rate = a.vatCategory === 'S' ? num(a.vatRate) : 0;
+    const key = `${a.vatCategory}|${rate}`;
+    const base = groups.get(key)?.taxable ?? 0;
+    const hasPct = String(a.percent ?? '').trim() !== '' && num(a.percent) !== 0;
+    const amount = hasPct ? round2((base * num(a.percent)) / 100) : round2(num(a.amount));
+    return { ...a, rate, key, base, hasPct, amount };
+  });
+  for (const a of allowances) {
+    if (!groups.has(a.key)) groups.set(a.key, { category: a.vatCategory, rate: a.rate, taxable: 0, tax: 0 });
+    const g = groups.get(a.key);
+    g.taxable = round2(g.taxable + (a.charge ? a.amount : -a.amount));
+    if (a.charge) chargeTotal = round2(chargeTotal + a.amount);
+    else allowanceTotal = round2(allowanceTotal + a.amount);
+  }
   let taxTotal = 0;
   const breakdown = [...groups.values()].map((g) => {
     g.tax = round2((g.taxable * g.rate) / 100);
@@ -174,11 +198,13 @@ export function computeTotals(inv) {
     return g;
   });
   breakdown.sort((a, b) => (a.category + a.rate).localeCompare(b.category + b.rate));
-  const taxExclusive = lineTotal;
+  const taxExclusive = round2(lineTotal - allowanceTotal + chargeTotal);
   const taxInclusive = round2(taxExclusive + taxTotal);
   const prepaid = round2(num(inv.prepaid));
   const payable = round2(taxInclusive - prepaid);
-  return { lineTotal, taxExclusive, taxTotal, taxInclusive, prepaid, payable, breakdown };
+  return {
+    lineTotal, allowanceTotal, chargeTotal, allowances, taxExclusive, taxTotal, taxInclusive, prepaid, payable, breakdown,
+  };
 }
 
 /** Baut BT-20 inkl. Skonto-Zeile im XRechnung-Format (BR-DE-18). */
@@ -189,7 +215,8 @@ export function paymentTermsText(inv) {
   if (String(p.skontoDays).trim() !== '' && String(p.skontoPercent).trim() !== '') {
     const days = parseInt(p.skontoDays, 10);
     const pct = num(p.skontoPercent).toFixed(2);
-    parts.push(`#SKONTO#TAGE=${days}#PROZENT=${pct}#`);
+    const base = String(p.skontoBase ?? '').trim() !== '' ? `#BASISBETRAG=${round2(num(p.skontoBase)).toFixed(2)}` : '';
+    parts.push(`#SKONTO#TAGE=${days}#PROZENT=${pct}${base}#`);
     return parts.join('\n') + '\n';
   }
   return parts.join('\n');

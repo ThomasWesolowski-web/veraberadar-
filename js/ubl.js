@@ -101,11 +101,11 @@ function writeParty(w, p, { isSeller, creditorId, omitTaxIds }) {
   w.close('cac:Party');
 }
 
-function writeTaxCategory(w, tag, category, rate, reason, code) {
+function writeTaxCategory(w, tag, category, rate, reason, code, { omitPercent = false } = {}) {
   w.open(tag);
   w.el('cbc:ID', category);
-  if (!(tag === 'cac:ClassifiedTaxCategory' && category === 'O')) w.el('cbc:Percent', pct(rate));
-  if (tag === 'cac:TaxCategory') {
+  if (!omitPercent && !(tag === 'cac:ClassifiedTaxCategory' && category === 'O')) w.el('cbc:Percent', pct(rate));
+  if (tag === 'cac:TaxCategory' && (reason || code)) {
     w.el('cbc:TaxExemptionReasonCode', code);
     w.el('cbc:TaxExemptionReason', reason);
   }
@@ -234,6 +234,18 @@ export function buildXRechnung(inv) {
   const terms = paymentTermsText(inv);
   if (has(terms)) w.open('cac:PaymentTerms').raw('cbc:Note', terms).close('cac:PaymentTerms');
 
+  // BG-20 / BG-21 Rabatte und Zuschläge auf Rechnungsebene
+  for (const a of t.allowances) {
+    w.open('cac:AllowanceCharge');
+    w.el('cbc:ChargeIndicator', a.charge ? 'true' : 'false');
+    w.el('cbc:AllowanceChargeReason', a.reason || (a.charge ? 'Zuschlag' : 'Rabatt'));
+    if (a.hasPct) w.el('cbc:MultiplierFactorNumeric', String(num(a.percent)));
+    w.el('cbc:Amount', amt(a.amount), { currencyID: cur });
+    if (a.hasPct) w.el('cbc:BaseAmount', amt(a.base), { currencyID: cur });
+    writeTaxCategory(w, 'cac:TaxCategory', a.vatCategory, a.rate, null, null, { omitPercent: a.vatCategory === 'O' });
+    w.close('cac:AllowanceCharge');
+  }
+
   // BG-23 Steueraufschlüsselung
   w.open('cac:TaxTotal');
   w.el('cbc:TaxAmount', amt(t.taxTotal), { currencyID: cur });
@@ -251,6 +263,8 @@ export function buildXRechnung(inv) {
   w.el('cbc:LineExtensionAmount', amt(t.lineTotal), { currencyID: cur });
   w.el('cbc:TaxExclusiveAmount', amt(t.taxExclusive), { currencyID: cur });
   w.el('cbc:TaxInclusiveAmount', amt(t.taxInclusive), { currencyID: cur });
+  if (t.allowances.some((a) => !a.charge)) w.el('cbc:AllowanceTotalAmount', amt(t.allowanceTotal), { currencyID: cur });
+  if (t.allowances.some((a) => a.charge)) w.el('cbc:ChargeTotalAmount', amt(t.chargeTotal), { currencyID: cur });
   if (t.prepaid) w.el('cbc:PrepaidAmount', amt(t.prepaid), { currencyID: cur });
   w.el('cbc:PayableAmount', amt(t.payable), { currencyID: cur });
   w.close('cac:LegalMonetaryTotal');

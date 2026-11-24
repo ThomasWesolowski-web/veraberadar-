@@ -138,6 +138,21 @@ export function validateInvoice(inv) {
       warn('§12', 'UStG', f('vatRate'), `Position ${n}: Steuersatz ${l.vatRate} % ist in Deutschland unüblich (19 % / 7 %).`);
   });
 
+  // Rabatte / Zuschläge auf Rechnungsebene
+  totals.allowances.forEach((a, i) => {
+    const what = a.charge ? 'Zuschlag' : 'Rabatt';
+    const f = (k) => `allowances.${i}.${k}`;
+    if (blank(a.reason)) err(a.charge ? 'BR-38' : 'BR-33', 'EN16931', f('reason'), `${what} ${i + 1}: Grund fehlt.`);
+    if (!(a.amount > 0)) err(a.charge ? 'BR-36' : 'BR-31', 'EN16931', f('amount'), `${what} ${i + 1}: Betrag oder Prozentsatz muss größer als 0 sein.`);
+    if (!VAT_CATEGORIES[a.vatCategory]) err('BR-CL-17', 'EN16931', f('vatCategory'), `${what} ${i + 1}: Unbekannte Steuerkategorie.`);
+    if (a.vatCategory === 'S' && !(a.rate > 0)) err('BR-S-06', 'EN16931', f('vatRate'), `${what} ${i + 1}: Steuersatz fehlt.`);
+    if (a.hasPct && a.base === 0)
+      warn('BASE', 'Hinweis', f('percent'), `${what} ${i + 1}: Keine Positionen mit Steuerkategorie ${a.vatCategory} ${a.rate} % – Prozentsatz wirkt auf 0 €.`);
+    categories.add(a.vatCategory);
+  });
+  if (totals.taxExclusive < 0)
+    warn('NEG', 'Hinweis', 'allowances', 'Der Nettobetrag ist negativ – Rabatte prüfen.');
+
   // ---------------------------------------------------------------- Steuer
   if (categories.has('O') && categories.size > 1)
     err('BR-O-11', 'EN16931', 'lines', 'Kategorie O (nicht steuerbar) darf nicht mit anderen Steuerkategorien kombiniert werden.');
@@ -183,6 +198,11 @@ export function validateInvoice(inv) {
     err('BR-DE-18', 'XRechnung', 'payment.skontoDays', 'Für Skonto müssen Tage und Prozentsatz angegeben werden.');
   if (hasSkontoDays && !/^\d+$/.test(String(p.skontoDays).trim()))
     err('BR-DE-18', 'XRechnung', 'payment.skontoDays', 'Skonto-Tage müssen eine ganze Zahl sein.');
+  if (!blank(p.skontoBase) && !(num(p.skontoBase) > 0))
+    err('BR-DE-18', 'XRechnung', 'payment.skontoBase', 'Skonto-Basisbetrag muss größer als 0 sein.');
+  if (hasSkontoPct && blank(p.skontoBase) && totals.prepaid > 0)
+    warn('SKONTO', 'Hinweis', 'payment.skontoBase',
+      'Bei Vorauszahlungen/Abschlägen sollte der Skonto-Basisbetrag angegeben werden – sonst rechnet der Empfänger Skonto auf den gesamten Zahlbetrag.');
   if (/^#/m.test(p.terms || ''))
     warn('BR-DE-18', 'XRechnung', 'payment.terms', 'Zeilen in den Zahlungsbedingungen dürfen nicht mit # beginnen (reserviert für Skonto).');
 
