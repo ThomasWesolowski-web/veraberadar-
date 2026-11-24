@@ -21,7 +21,25 @@ Alle Daten bleiben im Browser. Es gibt kein Backend und keinen Upload.
 
 Die rechtlichen Anforderungen sind in [docs/ANFORDERUNGEN.md](docs/ANFORDERUNGEN.md) zusammengefasst.
 
-## Starten
+## Windows-Programm (Windows 10/11)
+
+Das Tool gibt es auch als installierbares Desktop-Programm (Electron, 64 Bit).
+
+**Installieren**
+1. `XRechnung-Generator-Setup-<Version>.exe` ausführen. Es sind keine Administratorrechte nötig; installiert wird nach `%LOCALAPPDATA%\Programs\XRechnung-Generator`.
+2. Der Installer legt Verknüpfungen im Startmenü und auf dem Desktop an.
+3. Deinstallieren über *Einstellungen → Apps* oder `Deinstallieren.exe` im Programmordner.
+
+Der Installer ist nicht code-signiert. Windows SmartScreen zeigt deshalb beim ersten Start „Der Computer wurde durch Windows geschützt“. Über *Weitere Informationen → Trotzdem ausführen* geht es weiter.
+
+Gespeicherte Stammdaten liegen unter `%APPDATA%\xrechnung-generator` und bleiben beim Deinstallieren erhalten.
+
+**Installer selbst bauen**
+- Automatisch: Bei jedem Push baut GitHub Actions den Installer (*Actions → Windows-Installer bauen → Artifacts*).
+- Lokal: `npm install`, dann `npm run dist:win`. Dafür muss NSIS installiert sein (Linux: `apt install nsis`, Windows: [nsis.sourceforge.io](https://nsis.sourceforge.io)). Ergebnis: `dist/XRechnung-Generator-Setup-<Version>.exe`.
+- Desktop-App ohne Installer testen: `npm run app`.
+
+## Starten (Browser-Version)
 
 Es gibt keinen Build-Schritt. Wegen der ES-Module muss die Seite über einen Webserver laufen:
 
@@ -59,3 +77,6 @@ Die Tests decken ab: Berechnung und Rundung, Prüfziffern (IBAN, USt-IdNr., Leit
 | `js/xml-import.js` | Import UBL/CII |
 | `js/pdf-import.js`, `js/pdf-text.js` | PDF-Import (pdf.js) und Texterkennung |
 | `vendor/pdfjs/` | pdf.js 4.10.38 (Apache-2.0) |
+| `electron/main.cjs` | Desktop-Hülle für Windows |
+| `installer/` | NSIS-Installer-Skript und Build-Skript |
+| `build/` | Programm-Icon |

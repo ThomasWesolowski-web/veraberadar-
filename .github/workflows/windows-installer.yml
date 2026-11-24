@@ -1,0 +1,31 @@
+name: Windows-Installer bauen
+
+on:
+  push:
+    branches: ['**']
+    tags: ['v*']
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: NSIS installieren
+        run: sudo apt-get update && sudo apt-get install -y nsis
+      - name: Abhängigkeiten
+        run: npm ci
+      - name: Tests
+        run: npm test
+      - name: Installer bauen
+        run: npm run dist:win
+      - name: Installer bereitstellen
+        uses: actions/upload-artifact@v4
+        with:
+          name: XRechnung-Generator-Setup
+          path: dist/XRechnung-Generator-Setup-*.exe
+          retention-days: 30

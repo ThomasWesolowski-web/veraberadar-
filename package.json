@@ -6,9 +6,51 @@
   "type": "module",
   "scripts": {
     "test": "node --test tests/*.test.js",
-    "start": "npx --yes http-server -c-1 -p 8080 ."
+    "start": "npx --yes http-server -c-1 -p 8080 .",
+    "app": "electron .",
+    "dist:win": "node installer/build-windows.mjs"
   },
   "devDependencies": {
-    "@xmldom/xmldom": "^0.8.10"
+    "@xmldom/xmldom": "^0.8.10",
+    "electron": "^45.4.1",
+    "electron-builder": "^26.18.0"
+  },
+  "productName": "XRechnung-Generator",
+  "author": "XRechnung-Generator",
+  "main": "electron/main.cjs",
+  "build": {
+    "appId": "de.xrechnung.generator",
+    "productName": "XRechnung-Generator",
+    "copyright": "Alle Daten bleiben lokal",
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "files": [
+      "index.html",
+      "css/**",
+      "js/**",
+      "vendor/**",
+      "docs/**",
+      "electron/**",
+      "build/icon.png",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "dir",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.ico",
+      "artifactName": "XRechnung-Generator-Setup-${version}.${ext}"
+    },
+    "electronLanguages": [
+      "de",
+      "en-US"
+    ]
   }
 }
