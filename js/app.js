@@ -509,6 +509,33 @@ function init() {
   });
 
   renderAll();
+  initDesktop();
+}
+
+/** Nur in der Windows-App: Dateien aus Eingangsordner, „Senden an“ und „Öffnen mit“ übernehmen */
+function initDesktop() {
+  if (!window.desktop) return;
+  window.desktop.inboxInfo().then(({ path }) => {
+    $('#inbox-path').textContent = path;
+    $('#desktop-inbox').hidden = false;
+  });
+  $('#btn-open-inbox').onclick = () => window.desktop.openInbox();
+  const queue = [];
+  let busy = false;
+  const next = async () => {
+    if (busy || !queue.length) return;
+    busy = true;
+    const { name, data, fromInbox } = queue.shift();
+    const hasWork = inv.number && inv.lines.some((l) => l.name);
+    if (!hasWork || confirm(`„${name}“ wurde übergeben${fromInbox ? ' (Eingangsordner)' : ''}.\n\nJetzt einlesen? Die aktuellen Eingaben werden dabei ersetzt.`)) {
+      const type = /\.xml$/i.test(name) ? 'application/xml' : 'application/pdf';
+      await handleFile(new File([data], name, { type }));
+      document.querySelector('.form-col').scrollIntoView({ behavior: 'smooth' });
+    }
+    busy = false;
+    next();
+  };
+  window.desktop.onOpenFile((payload) => { queue.push(payload); next(); });
 }
 
 init();

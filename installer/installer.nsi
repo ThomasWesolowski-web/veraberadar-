@@ -69,6 +69,17 @@ Section "Programm" SecMain
 
   CreateShortCut "$SMPROGRAMS\${APPNAME}.lnk" "$INSTDIR\${EXENAME}" "" "$INSTDIR\icon.ico" 0
   CreateShortCut "$DESKTOP\${APPNAME}.lnk" "$INSTDIR\${EXENAME}" "" "$INSTDIR\icon.ico" 0
+  ; Rechtsklick → "Senden an" → XRechnung-Generator
+  CreateShortCut "$SENDTO\${APPNAME}.lnk" "$INSTDIR\${EXENAME}" "" "$INSTDIR\icon.ico" 0
+
+  ; "Öffnen mit" für PDF- und XML-Dateien (ohne die Standard-App zu ändern)
+  WriteRegStr HKCU "Software\Classes\Applications\${EXENAME}" "FriendlyAppName" "${APPNAME}"
+  WriteRegStr HKCU "Software\Classes\Applications\${EXENAME}\DefaultIcon" "" "$INSTDIR\icon.ico"
+  WriteRegStr HKCU "Software\Classes\Applications\${EXENAME}\shell\open\command" "" '"$INSTDIR\${EXENAME}" "%1"'
+  WriteRegStr HKCU "Software\Classes\Applications\${EXENAME}\SupportedTypes" ".pdf" ""
+  WriteRegStr HKCU "Software\Classes\Applications\${EXENAME}\SupportedTypes" ".xml" ""
+  WriteRegStr HKCU "Software\Classes\.pdf\OpenWithList\${EXENAME}" "" ""
+  WriteRegStr HKCU "Software\Classes\.xml\OpenWithList\${EXENAME}" "" ""
 
   WriteRegStr HKCU "Software\${APPNAME}" "InstallDir" "$INSTDIR"
   WriteRegStr HKCU "${UNINSTKEY}" "DisplayName" "${APPNAME}"
@@ -89,6 +100,10 @@ Section "Uninstall"
   nsExec::Exec 'taskkill /F /IM "${EXENAME}"'
   Delete "$SMPROGRAMS\${APPNAME}.lnk"
   Delete "$DESKTOP\${APPNAME}.lnk"
+  Delete "$SENDTO\${APPNAME}.lnk"
+  DeleteRegKey HKCU "Software\Classes\Applications\${EXENAME}"
+  DeleteRegKey HKCU "Software\Classes\.pdf\OpenWithList\${EXENAME}"
+  DeleteRegKey HKCU "Software\Classes\.xml\OpenWithList\${EXENAME}"
   RMDir /r "$INSTDIR"
   DeleteRegKey HKCU "${UNINSTKEY}"
   DeleteRegKey HKCU "Software\${APPNAME}"

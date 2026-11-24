@@ -42,6 +42,12 @@ Der Installer ist nicht code-signiert. Windows SmartScreen zeigt deshalb beim er
 
 Gespeicherte Stammdaten liegen unter `%APPDATA%\xrechnung-generator` und bleiben beim Deinstallieren erhalten.
 
+**Rechnungen direkt aus WinWorker oder einer anderen Handwerkersoftware übergeben**
+- **Eingangsordner** (empfohlen): Das Programm überwacht `Dokumente\XRechnung-Generator\Eingang`. Jede PDF oder XML, die dort gespeichert wird, liest es sofort automatisch ein. Danach verschiebt es die Datei nach `Eingang\verarbeitet`. In WinWorker stellen Sie dafür den Speicherort für PDF-Rechnungen (Export, PDF-Ablage oder „Drucken als PDF“) auf diesen Ordner. Das Programm muss dabei laufen.
+- **Senden an:** Rechtsklick auf eine PDF → *Senden an* → *XRechnung-Generator*.
+- **Öffnen mit:** Rechtsklick auf eine PDF → *Öffnen mit* → *XRechnung-Generator*.
+- **Programmaufruf:** `XRechnung-Generator.exe "C:\Pfad\Rechnung.pdf"`. Das geht auch, wenn das Programm schon läuft: Die Datei wird dann an das offene Fenster übergeben.
+
 **Installer selbst bauen**
 - Automatisch: Bei jedem Push baut GitHub Actions den Installer (*Actions → Windows-Installer bauen → Artifacts*).
 - Lokal: `npm install`, dann `npm run dist:win`. Dafür muss NSIS installiert sein (Linux: `apt install nsis`, Windows: [nsis.sourceforge.io](https://nsis.sourceforge.io)). Ergebnis: `dist/XRechnung-Generator-Setup-<Version>.exe`.
@@ -94,6 +100,6 @@ Die Tests decken ab: Berechnung und Rundung, Prüfziffern (IBAN, USt-IdNr., Leit
 | `vendor/pdfjs/` | pdf.js 4.10.38 (Apache-2.0) |
 | `vendor/pdf-lib/` | pdf-lib 1.17.1 und fontkit (MIT) |
 | `vendor/fonts/` | Liberation Sans (SIL OFL 1.1), sRGB-ICC-Profil (Zlib) |
-| `electron/main.cjs` | Desktop-Hülle für Windows |
+| `electron/main.cjs`, `electron/preload.cjs` | Desktop-Hülle für Windows (Dateiübergabe, Eingangsordner) |
 | `installer/` | NSIS-Installer-Skript und Build-Skript |
 | `build/` | Programm-Icon |

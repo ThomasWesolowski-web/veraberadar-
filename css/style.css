@@ -136,3 +136,7 @@ table.lines textarea.small { font-size: .8rem; margin-top: .25rem; resize: verti
 table.allowances td { vertical-align: middle; }
 table.allowances input.reason { min-width: 160px; }
 .export label { color: var(--text); }
+
+.inbox-box { margin-top: .8rem; padding: .7rem .9rem; border-radius: 8px; background: var(--accent-soft); font-size: .85rem; display: flex; flex-wrap: wrap; gap: .4rem; align-items: center; }
+.inbox-box code { background: #fff; padding: .15rem .4rem; border-radius: 4px; word-break: break-all; }
+.inbox-box small { flex-basis: 100%; color: var(--muted); }

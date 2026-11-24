@@ -1,6 +1,7 @@
 // Desktop-Hülle (Electron) für den XRechnung-Generator unter Windows
-const { app, BrowserWindow, protocol, net, shell, Menu, dialog } = require('electron');
+const { app, BrowserWindow, protocol, net, shell, Menu, dialog, ipcMain } = require('electron');
 const path = require('node:path');
+const fs = require('node:fs');
 const { pathToFileURL } = require('node:url');
 
 const ROOT = path.join(__dirname, '..');
@@ -36,6 +37,82 @@ function registerProtocol() {
   });
 }
 
+// ------------------------------------------------------------------ Dateiübergabe
+// 1) Programmaufruf mit Dateipfad ("Öffnen mit", "Senden an", Aufruf aus WinWorker o. ä.)
+// 2) Eingangsordner: neue PDF/XML-Dateien werden automatisch eingelesen
+let mainWindow = null;
+let rendererReady = false;
+const pendingFiles = [];
+const ACCEPTED = /\.(pdf|xml)$/i;
+
+function inboxDir() {
+  return process.env.XRG_INBOX || path.join(app.getPath('documents'), 'XRechnung-Generator', 'Eingang');
+}
+function doneDir() {
+  return path.join(inboxDir(), 'verarbeitet');
+}
+function filesFromArgv(argv) {
+  return argv.slice(1).filter((a) => ACCEPTED.test(a) && !a.startsWith('--') && fs.existsSync(a));
+}
+
+function deliverFile(filePath, { fromInbox = false } = {}) {
+  let data;
+  try { data = fs.readFileSync(filePath); } catch { return; }
+  const payload = { name: path.basename(filePath), data: new Uint8Array(data), fromInbox };
+  if (fromInbox) {
+    // nach dem Einlesen in "verarbeitet" verschieben, damit nichts doppelt importiert wird
+    try {
+      fs.mkdirSync(doneDir(), { recursive: true });
+      const stamp = new Date().toISOString().replace(/[:T]/g, '-').slice(0, 19);
+      fs.renameSync(filePath, path.join(doneDir(), `${stamp}_${path.basename(filePath)}`));
+    } catch { /* Datei evtl. noch gesperrt – bleibt liegen */ }
+  }
+  if (mainWindow && rendererReady) {
+    if (mainWindow.isMinimized()) mainWindow.restore();
+    mainWindow.show();
+    mainWindow.focus();
+    mainWindow.webContents.send('open-file', payload);
+  } else {
+    pendingFiles.push(payload);
+  }
+}
+
+/** wartet, bis die Datei nicht mehr wächst (z. B. während WinWorker noch schreibt) */
+function whenStable(filePath, cb, tries = 0) {
+  let size1;
+  try { size1 = fs.statSync(filePath).size; } catch { return; }
+  setTimeout(() => {
+    let size2;
+    try { size2 = fs.statSync(filePath).size; } catch { return; }
+    if (size1 === size2 && size2 > 0) {
+      try { fs.closeSync(fs.openSync(filePath, 'r+')); cb(); return; } catch { /* noch gesperrt */ }
+    }
+    if (tries < 60) whenStable(filePath, cb, tries + 1);
+  }, 500);
+}
+
+function watchInbox() {
+  const dir = inboxDir();
+  try { fs.mkdirSync(dir, { recursive: true }); } catch { return; }
+  const seen = new Map();
+  fs.watch(dir, (event, name) => {
+    if (!name || !ACCEPTED.test(name)) return;
+    const full = path.join(dir, name);
+    const now = Date.now();
+    if (seen.has(full) && now - seen.get(full) < 3000) return;
+    if (!fs.existsSync(full)) return;
+    seen.set(full, now);
+    whenStable(full, () => deliverFile(full, { fromInbox: true }));
+  });
+}
+
+ipcMain.handle('inbox-info', () => ({ path: inboxDir() }));
+ipcMain.handle('open-inbox', () => shell.openPath(inboxDir()));
+ipcMain.on('renderer-ready', () => {
+  rendererReady = true;
+  while (pendingFiles.length) mainWindow.webContents.send('open-file', pendingFiles.shift());
+});
+
 function createWindow() {
   const win = new BrowserWindow({
     width: 1400,
@@ -50,8 +127,11 @@ function createWindow() {
       nodeIntegration: false,
       sandbox: true,
       spellcheck: false,
+      preload: path.join(__dirname, 'preload.cjs'),
     },
   });
+  mainWindow = win;
+  win.webContents.on('did-start-loading', () => { rendererReady = false; });
 
   // Externe Links (z. B. KoSIT-Validator) im Standardbrowser öffnen
   win.webContents.setWindowOpenHandler(({ url }) => {
@@ -147,14 +227,17 @@ function buildMenu() {
 if (!app.requestSingleInstanceLock()) {
   app.quit();
 } else {
-  app.on('second-instance', () => {
-    const [win] = BrowserWindow.getAllWindows();
-    if (win) { if (win.isMinimized()) win.restore(); win.focus(); }
+  app.on('second-instance', (_e, argv) => {
+    const files = filesFromArgv(argv);
+    if (files.length) { files.forEach((f) => deliverFile(f)); return; }
+    if (mainWindow) { if (mainWindow.isMinimized()) mainWindow.restore(); mainWindow.focus(); }
   });
   app.whenReady().then(() => {
     registerProtocol();
     buildMenu();
     createWindow();
+    filesFromArgv(process.argv).forEach((f) => deliverFile(f));
+    watchInbox();
   });
   app.on('window-all-closed', () => app.quit());
 }

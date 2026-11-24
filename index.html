@@ -31,6 +31,13 @@
         <small>PDF: Text wird ausgelesen; enthaltene ZUGFeRD/Factur-X-Daten werden direkt übernommen. XML: XRechnung (UBL/CII) oder ZUGFeRD.<br>
         Alle Daten bleiben in Ihrem Browser – es wird nichts hochgeladen.</small>
       </label>
+      <div id="desktop-inbox" class="inbox-box" hidden>
+        <strong>Direktübernahme aus WinWorker &amp; Co.:</strong>
+        PDFs, die in diesem Ordner gespeichert werden, werden automatisch eingelesen:
+        <code id="inbox-path"></code>
+        <button type="button" id="btn-open-inbox" class="ghost">Ordner öffnen</button>
+        <small>Alternativ: Rechtsklick auf eine PDF → „Senden an“ → XRechnung-Generator.</small>
+      </div>
       <div id="import-result" class="import-result" hidden></div>
       <label class="check" id="attach-row" hidden>
         <input type="checkbox" id="attach-pdf" checked>
