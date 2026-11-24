@@ -12,7 +12,16 @@ const blank = (v) => v === undefined || v === null || String(v).trim() === '';
  *  { level: 'error' | 'warning' | 'info', rule, source, field, message }
  * source: 'UStG' | 'EN16931' | 'XRechnung' | 'Hinweis'
  */
-export function validateInvoice(inv) {
+export function validateInvoice(inv, { profile = 'XRECHNUNG' } = {}) {
+  const findings = validateCore(inv);
+  if (profile !== 'EN16931') return findings;
+  // ZUGFeRD-Profil EN 16931: XRechnung-Zusatzregeln (BR-DE) sind nur Empfehlungen
+  return findings.map((f) => (f.source === 'XRechnung'
+    ? { ...f, level: f.level === 'error' ? 'info' : f.level, message: `(nur für XRechnung verpflichtend) ${f.message}` }
+    : f));
+}
+
+function validateCore(inv) {
   const out = [];
   const add = (level, rule, source, field, message) =>
     out.push({ level, rule, source, field, message });

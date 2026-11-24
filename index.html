@@ -77,7 +77,7 @@
           <input type="date" data-bind="periodEnd"></label>
       </div>
       <label class="full">Bemerkung (BT-22)
-        <textarea data-bind="note" rows="2"></textarea></label>
+        <textarea data-bind="note" rows="5"></textarea></label>
     </section>
 
     <!-- 3 Verkäufer -->
@@ -183,6 +183,14 @@
         </table>
       </div>
       <button type="button" id="btn-add-line" class="ghost">+ Position hinzufügen</button>
+      <h3>Rabatte / Zuschläge auf die Gesamtrechnung <small>(BG-20 / BG-21 – Prozent auf die Positionssumme der jeweiligen Steuergruppe oder fester Betrag)</small></h3>
+      <div class="table-wrap">
+        <table class="lines allowances">
+          <tbody id="allow-body"></tbody>
+        </table>
+      </div>
+      <button type="button" id="btn-add-allowance" class="ghost">+ Rabatt</button>
+      <button type="button" id="btn-add-charge" class="ghost">+ Zuschlag</button>
       <div id="exemptions"></div>
     </section>
 
@@ -226,6 +234,8 @@
           <input type="number" min="0" data-bind="payment.skontoDays"></label>
         <label>Skonto: Prozent
           <input type="number" step="0.01" min="0" data-bind="payment.skontoPercent"></label>
+        <label>Skonto: Basisbetrag (optional)
+          <input type="number" step="0.01" min="0" data-bind="payment.skontoBase" placeholder="leer = gesamter Zahlbetrag"></label>
       </div>
     </section>
   </section>
@@ -239,6 +249,18 @@
       <div id="status" class="status"></div>
       <ul id="findings" class="findings"></ul>
       <div class="export">
+        <label>Ausgabeformat
+          <select id="export-format">
+            <option value="xrechnung">XRechnung 3.0 (XML, UBL) – Pflicht bei Behörden</option>
+            <option value="zugferd-en16931">ZUGFeRD 2.3 – Profil EN 16931 (PDF mit XML)</option>
+            <option value="zugferd-xrechnung">ZUGFeRD 2.3 – Profil XRECHNUNG (PDF mit XML)</option>
+          </select></label>
+        <label id="pdf-source-row" hidden>Sichtbarer Teil der PDF
+          <select id="pdf-source">
+            <option value="original">Original-PDF verwenden (Layout bleibt erhalten)</option>
+            <option value="new">PDF neu aus den Daten erzeugen</option>
+          </select></label>
+        <p id="format-hint" class="hint"></p>
         <button type="button" id="btn-download" class="primary">XRechnung herunterladen (XML)</button>
         <button type="button" id="btn-preview" class="ghost">XML anzeigen</button>
         <button type="button" id="btn-report" class="ghost">Prüfbericht herunterladen</button>

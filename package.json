@@ -1,14 +1,15 @@
 {
   "name": "xrechnung-generator",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "private": true,
-  "description": "Browserbasiertes Tool zur Erstellung und Prüfung von XRechnungen (XRechnung 3.0, EN 16931) aus PDF- oder XML-Rechnungen",
+  "description": "Erstellt und prüft E-Rechnungen als XRechnung 3.0 (UBL) oder ZUGFeRD 2.3 (PDF/A-3 mit CII) aus PDF- oder XML-Rechnungen",
   "type": "module",
   "scripts": {
     "test": "node --test tests/*.test.js",
     "start": "npx --yes http-server -c-1 -p 8080 .",
     "app": "electron .",
-    "dist:win": "node installer/build-windows.mjs"
+    "dist:win": "node installer/build-windows.mjs",
+    "validate:official": "tools/official-validation.sh"
   },
   "devDependencies": {
     "@pdf-lib/fontkit": "^1.1.1",

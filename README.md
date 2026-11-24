@@ -1,6 +1,13 @@
 # XRechnung-Generator
 
-Browserbasiertes Tool, mit dem Sie **E-Rechnungen im Format XRechnung 3.0** (EN 16931, Syntax UBL 2.1) erstellen und prüfen. Die Daten kommen aus einer bestehenden **PDF-** oder **XML-Rechnung** oder werden von Hand erfasst.
+Tool, mit dem Sie **E-Rechnungen** erstellen und prüfen. Es läuft im Browser oder als Windows-Programm. Die Daten kommen aus einer bestehenden **PDF-** oder **XML-Rechnung** oder werden von Hand erfasst.
+
+Ausgabeformate (auswählbar):
+- **XRechnung 3.0**: XML-Datei, Syntax UBL 2.1. Pflichtformat für öffentliche Auftraggeber.
+- **ZUGFeRD 2.3, Profil EN 16931 (Comfort)**: PDF/A-3 mit eingebetteter `factur-x.xml` (CII).
+- **ZUGFeRD 2.3, Profil XRECHNUNG**: wie oben, erfüllt zusätzlich alle XRechnung-Regeln.
+
+Für den sichtbaren Teil der ZUGFeRD-PDF gibt es zwei Wege: Die **Original-PDF** wird um die Daten ergänzt (ein reiner Rechteschutz ohne Öffnungspasswort wird dafür entfernt), oder die PDF wird **neu aus den Daten erzeugt** (Schrift eingebettet).
 
 Alle Daten bleiben im Browser. Es gibt kein Backend und keinen Upload.
 
@@ -16,7 +23,8 @@ Alle Daten bleiben im Browser. Es gibt kein Backend und keinen Upload.
   - die Pflichtangaben nach **§ 14 Abs. 4 UStG** und § 14a UStG,
   - **EN-16931-Kernregeln** (Steuerkategorien S, Z, E, AE, K, G, O; Summen; Datumsangaben),
   - **XRechnung-Regeln BR-DE-1 bis BR-DE-31** (Käuferreferenz, Ansprechpartner, Zahlungsarten, Skonto-Syntax, IBAN-Prüfziffer, Leitweg-ID-Prüfziffer usw.).
-- **Export** der XRechnung als XML. Der Download ist gesperrt, solange Fehler bestehen. Zusätzlich gibt es einen Prüfbericht als Text.
+- **Rabatte und Zuschläge auf Rechnungsebene** (prozentual oder als Betrag), **Abschlagszahlungen** (bereits gezahlt) und **Skonto mit Basisbetrag**. Damit lassen sich Schluss- und Abschlagsrechnungen abbilden.
+- **Export** als XRechnung (XML) oder ZUGFeRD (PDF). Der Download ist gesperrt, solange Fehler bestehen. Zusätzlich gibt es einen Prüfbericht als Text.
 - Die eigenen **Stammdaten** (Firma, Kontakt, Bank) lassen sich im Browser speichern.
 
 Die rechtlichen Anforderungen sind in [docs/ANFORDERUNGEN.md](docs/ANFORDERUNGEN.md) zusammengefasst.
@@ -58,13 +66,16 @@ npm install
 npm test
 ```
 
+Offizielle Prüfung mit den Schematron-Regeln von CEN (EN 16931) und KoSIT (XRechnung) sowie dem CII-Schema: `npm run validate:official` (lädt die Regeln herunter; benötigt Python). Die Prüfung läuft auch automatisch in GitHub Actions.
+
 Die Tests decken ab: Berechnung und Rundung, Prüfziffern (IBAN, USt-IdNr., Leitweg-ID), Prüfregeln, UBL-Erzeugung (Invoice und CreditNote, Elementreihenfolge, Maskierung), Rundreise Export → Import, ZUGFeRD-Import und PDF-Texterkennung.
 
 ## Grenzen
 
 - Die PDF-Texterkennung ist heuristisch. Erkannte Werte sind ein Vorschlag und müssen geprüft werden. Gescannte PDFs ohne Textebene brauchen vorher OCR.
 - Die eingebauten Prüfregeln bilden die wichtigsten Regeln nach. Sie ersetzen nicht den offiziellen [KoSIT-Validator](https://github.com/itplr-kosit/validator-configuration-xrechnung), der für die verbindliche Prüfung empfohlen wird.
-- Nicht unterstützt: Zu- und Abschläge auf Beleg- und Positionsebene, Fremdwährungen mit Steuerwährung (BT-6) und Steuervertreter (BG-11).
+- ZUGFeRD aus einer Original-PDF: Die eingebetteten Daten sind korrekt und geprüft. Ob die PDF vollständig PDF/A-3-konform ist, hängt aber von der Original-PDF ab, zum Beispiel davon, ob alle Schriften eingebettet sind. Für maximale Konformität „PDF neu erzeugen“ wählen.
+- Nicht unterstützt: Rabatte auf Positionsebene (werden in den Einzelpreis eingerechnet), Fremdwährungen mit Steuerwährung (BT-6), Steuervertreter (BG-11) und Unterpositionen.
 
 ## Aufbau
 
@@ -74,9 +85,15 @@ Die Tests decken ab: Berechnung und Rundung, Prüfziffern (IBAN, USt-IdNr., Leit
 | `js/model.js` | Datenmodell, Codelisten, Berechnung, Prüfziffern |
 | `js/validate.js` | Prüfregeln (UStG, EN 16931, XRechnung) |
 | `js/ubl.js` | Erzeugung XRechnung UBL 2.1 |
+| `js/cii.js` | Erzeugung ZUGFeRD/Factur-X CII |
+| `js/zugferd.js` | ZUGFeRD-PDF (PDF/A-3 mit factur-x.xml), PDF-Layout |
+| `js/pdf-decrypt.js` | Entfernen eines reinen Rechteschutzes (RC4/AES) |
+| `tools/` | Offizielle Validierung (Schematron/XSD) |
 | `js/xml-import.js` | Import UBL/CII |
 | `js/pdf-import.js`, `js/pdf-text.js` | PDF-Import (pdf.js) und Texterkennung |
 | `vendor/pdfjs/` | pdf.js 4.10.38 (Apache-2.0) |
+| `vendor/pdf-lib/` | pdf-lib 1.17.1 und fontkit (MIT) |
+| `vendor/fonts/` | Liberation Sans (SIL OFL 1.1), sRGB-ICC-Profil (Zlib) |
 | `electron/main.cjs` | Desktop-Hülle für Windows |
 | `installer/` | NSIS-Installer-Skript und Build-Skript |
 | `build/` | Programm-Icon |

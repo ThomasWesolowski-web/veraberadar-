@@ -1,13 +1,20 @@
 import {
   INVOICE_TYPES, VAT_CATEGORIES, PAYMENT_MEANS, UNITS, EAS_SCHEMES, DEFAULT_EXEMPTION,
-  emptyInvoice, emptyLine, computeTotals, lineNet, num,
+  emptyInvoice, emptyLine, emptyAllowance, computeTotals, lineNet, num,
 } from './model.js';
 import { validateInvoice, summarize } from './validate.js';
 import { buildXRechnung, suggestedFilename } from './ubl.js';
+import { buildCii } from './cii.js';
 import { importXml } from './xml-import.js';
 
 const MASTER_KEY = 'xrechnung.master.v1';
 const DRAFT_KEY = 'xrechnung.draft.v1';
+const FORMAT_KEY = 'xrechnung.format.v1';
+
+let exportFormat = localStorage.getItem(FORMAT_KEY) || 'xrechnung';
+const isZugferd = () => exportFormat.startsWith('zugferd');
+const zugferdProfile = () => (exportFormat === 'zugferd-xrechnung' ? 'XRECHNUNG' : 'EN16931');
+const validationProfile = () => (exportFormat === 'zugferd-en16931' ? 'EN16931' : 'XRECHNUNG');
 
 let inv = loadDraft() || withMaster(emptyInvoice());
 let importedPdf = null; // { filename, base64 }
@@ -41,7 +48,8 @@ function loadDraft() {
     if (!d) return null;
     const base = emptyInvoice();
     return { ...base, ...d, seller: { ...base.seller, ...d.seller }, buyer: { ...base.buyer, ...d.buyer },
-      payment: { ...base.payment, ...d.payment }, delivery: { ...base.delivery, ...d.delivery }, attachment: null };
+      payment: { ...base.payment, ...d.payment }, delivery: { ...base.delivery, ...d.delivery },
+      allowances: Array.isArray(d.allowances) ? d.allowances : [], attachment: null };
   } catch { return null; }
 }
 function saveDraft() {
@@ -92,7 +100,7 @@ function renderLines() {
       <td class="pos">${i + 1}</td>
       <td class="desc">
         <input data-l="name" placeholder="Bezeichnung" value="${escHtml(l.name)}">
-        <input data-l="description" placeholder="Beschreibung (optional)" value="${escHtml(l.description)}" class="small">
+        <textarea data-l="description" placeholder="Beschreibung / Langtext (optional)" class="small" rows="${Math.min(6, Math.max(1, String(l.description || '').split('\n').length))}">${escHtml(l.description)}</textarea>
         <input data-l="articleNo" placeholder="Artikelnr. (optional)" value="${escHtml(l.articleNo)}" class="small">
       </td>
       <td><input data-l="quantity" type="number" step="any" value="${l.quantity}" class="n"></td>
@@ -126,6 +134,37 @@ function renderLines() {
   });
 }
 
+function renderAllowances() {
+  const body = $('#allow-body');
+  body.innerHTML = '';
+  const t = computeTotals(inv);
+  inv.allowances.forEach((a, i) => {
+    const calc = t.allowances[i];
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><strong>${a.charge ? 'Zuschlag' : 'Rabatt'}</strong></td>
+      <td><input data-a="reason" class="reason" placeholder="Grund" value="${escHtml(a.reason)}"></td>
+      <td><input data-a="percent" type="number" step="any" class="n" placeholder="%" value="${escHtml(a.percent)}"> %</td>
+      <td><input data-a="amount" type="number" step="0.01" class="n" placeholder="Betrag" value="${calc && calc.hasPct ? calc.amount : a.amount}" ${calc && calc.hasPct ? 'disabled title="wird aus dem Prozentsatz berechnet"' : ''}></td>
+      <td><select data-a="vatCategory">${Object.keys(VAT_CATEGORIES).map((k) => `<option value="${k}"${k === a.vatCategory ? ' selected' : ''}>${k}</option>`).join('')}</select></td>
+      <td><input data-a="vatRate" type="number" step="any" class="n rate" value="${a.vatCategory === 'S' ? a.vatRate : 0}" ${a.vatCategory === 'S' ? '' : 'disabled'}> %</td>
+      <td><button type="button" class="del" title="Entfernen">✕</button></td>`;
+    for (const el of $$('[data-a]', tr)) {
+      el.onchange = el.oninput = () => {
+        const k = el.dataset.a;
+        a[k] = ['amount', 'vatRate'].includes(k) ? num(el.value) : el.value;
+        if (k === 'percent' || k === 'vatCategory') {
+          if (el.type !== 'number' || el.value === '' || k === 'vatCategory') renderAllowances();
+          else { const c = computeTotals(inv).allowances[i]; $('[data-a="amount"]', tr).value = c.amount; $('[data-a="amount"]', tr).disabled = c.hasPct; }
+        }
+        refresh();
+      };
+    }
+    $('.del', tr).onclick = () => { inv.allowances.splice(i, 1); renderAllowances(); refresh(); };
+    body.appendChild(tr);
+  });
+}
+
 function renderExemptions() {
   const box = $('#exemptions');
   const cats = [...new Set(inv.lines.map((l) => l.vatCategory))].filter((c) => DEFAULT_EXEMPTION[c]);
@@ -150,6 +189,8 @@ function renderExemptions() {
 function renderTotals(t) {
   const rows = [
     ['Summe Positionen netto', t.lineTotal],
+    ...t.allowances.map((a) => [`${a.charge ? 'zzgl.' : 'abzgl.'} ${a.reason || ''}${a.hasPct ? ` ${a.percent} %` : ''}`, a.charge ? a.amount : -a.amount]),
+    ...(t.allowances.length ? [['Nettobetrag', t.taxExclusive, 'strong']] : []),
     ...t.breakdown.map((g) => [
       g.category === 'S' ? `USt ${g.rate} % auf ${fmt(g.taxable)}` : `Kategorie ${g.category} (0 %) auf ${fmt(g.taxable)}`, g.tax]),
     ['Gesamtbetrag brutto', t.taxInclusive, 'strong'],
@@ -195,6 +236,8 @@ function fieldElement(field) {
   if (m) return $$('#lines-body tr')[Number(m[1])]?.querySelector(`[data-l="${m[2]}"]`);
   const ex = /^exemptions\.(\w+)$/.exec(field);
   if (ex) return $('#exemptions input');
+  const al = /^allowances\.(\d+)\.(\w+)$/.exec(field);
+  if (al) return $$('#allow-body tr')[Number(al[1])]?.querySelector(`[data-a="${al[2]}"]`);
   return $(`[data-bind="${field}"]`);
 }
 function focusField(field) {
@@ -208,19 +251,70 @@ function focusField(field) {
 
 let lastFindings = [];
 function refresh() {
-  inv.attachment = importedPdf && $('#attach-pdf').checked
+  inv.attachment = importedPdf && !isZugferd() && $('#attach-pdf').checked
     ? { filename: importedPdf.filename, mimeCode: 'application/pdf', base64: importedPdf.base64, description: 'Originalrechnung (PDF)' }
     : null;
+  updateFormatUi();
   const t = computeTotals(inv);
+  document.querySelectorAll('#allow-body tr').forEach((tr, i) => {
+    const c = t.allowances[i];
+    const el = tr.querySelector('[data-a="amount"]');
+    if (c && c.hasPct && el && document.activeElement !== el) el.value = c.amount;
+  });
   renderTotals(t);
-  lastFindings = validateInvoice(inv);
+  lastFindings = validateInvoice(inv, { profile: validationProfile() });
   renderFindings(lastFindings);
   saveDraft();
+}
+
+function updateFormatUi() {
+  const zf = isZugferd();
+  $('#export-format').value = exportFormat;
+  $('#pdf-source-row').hidden = !(zf && importedPdf);
+  $('#attach-row').hidden = !importedPdf || zf;
+  $('#btn-download').textContent = zf ? 'ZUGFeRD-PDF herunterladen' : 'XRechnung herunterladen (XML)';
+  let hint = '';
+  if (exportFormat === 'xrechnung') hint = 'Reine XML-Datei. Pflichtformat für öffentliche Auftraggeber; auch im B2B-Verkehr zulässig.';
+  else if (exportFormat === 'zugferd-en16931') hint = 'PDF zum Lesen plus eingebettete XML (factur-x.xml). Im B2B-Verkehr verbreitet; XRechnung-Zusatzregeln sind hier nur Empfehlungen.';
+  else hint = 'ZUGFeRD im Profil XRECHNUNG: erfüllt zusätzlich alle XRechnung-Regeln (z. B. für Behörden, die ZUGFeRD akzeptieren).';
+  if (zf && importedPdf && $('#pdf-source').value === 'original') {
+    hint += ' Die Original-PDF wird um die Rechnungsdaten und PDF/A-3-Kennzeichnung ergänzt; volle PDF/A-Konformität hängt von der Original-PDF ab (im Zweifel „neu erzeugen“ wählen).';
+  }
+  $('#format-hint').textContent = hint;
+}
+
+let zugferdDeps = null;
+function loadScript(src) {
+  return new Promise((resolve, reject) => {
+    const el = document.createElement('script');
+    el.src = src;
+    el.onload = resolve;
+    el.onerror = () => reject(new Error(`${src} konnte nicht geladen werden`));
+    document.head.appendChild(el);
+  });
+}
+async function loadZugferdDeps() {
+  if (zugferdDeps) return zugferdDeps;
+  if (!window.PDFLib) await loadScript('vendor/pdf-lib/pdf-lib.min.js');
+  if (!window.fontkit) await loadScript('vendor/pdf-lib/fontkit.umd.min.js');
+  const bytes = async (u) => new Uint8Array(await (await fetch(u)).arrayBuffer());
+  const [fontRegular, fontBold, icc] = await Promise.all([
+    bytes('vendor/fonts/LiberationSans-Regular.ttf'), bytes('vendor/fonts/LiberationSans-Bold.ttf'), bytes('vendor/fonts/sRGB.icc'),
+  ]);
+  zugferdDeps = { PDFLib: window.PDFLib, fontkit: window.fontkit, fontRegular, fontBold, icc };
+  return zugferdDeps;
+}
+function base64ToBytes(b64) {
+  const bin = atob(b64);
+  const out = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+  return out;
 }
 
 function renderAll() {
   bindForm();
   renderLines();
+  renderAllowances();
   renderExemptions();
   refresh();
 }
@@ -341,13 +435,63 @@ function init() {
   };
   $('#attach-pdf').onchange = refresh;
 
-  $('#btn-download').onclick = () => {
+  $('#btn-download').onclick = async () => {
     if (summarize(lastFindings).errors) return;
-    download(suggestedFilename(inv), buildXRechnung(inv), 'application/xml');
+    if (!isZugferd()) {
+      download(suggestedFilename(inv), buildXRechnung(inv), 'application/xml');
+      return;
+    }
+    const btn = $('#btn-download');
+    const label = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = 'ZUGFeRD-PDF wird erstellt …';
+    try {
+      const deps = await loadZugferdDeps();
+      const { buildZugferdPdf, zugferdFilename } = await import('./zugferd.js');
+      const useOriginal = importedPdf && $('#pdf-source').value === 'original';
+      const res = await buildZugferdPdf(inv, {
+        profile: zugferdProfile(),
+        sourcePdf: useOriginal ? base64ToBytes(importedPdf.base64) : null,
+        deps,
+      });
+      download(zugferdFilename(inv), res.bytes, 'application/pdf');
+      if (res.decrypted) {
+        showImportResult('Hinweis: Der Rechteschutz (Bearbeitungssperre) der Original-PDF wurde entfernt, damit die ZUGFeRD-Daten eingebettet werden konnten. Der Inhalt der PDF ist unverändert.', 'ok');
+      }
+    } catch (e) {
+      console.error(e);
+      alert(`ZUGFeRD-PDF konnte nicht erstellt werden: ${e.message || e}`);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = label;
+    }
   };
   $('#btn-preview').onclick = () => {
-    $('#xml-output').textContent = buildXRechnung(inv);
+    $('#xml-output').textContent = isZugferd() ? buildCii(inv, zugferdProfile()) : buildXRechnung(inv);
+    $('.dialog-head strong').textContent = isZugferd() ? 'ZUGFeRD-Daten (factur-x.xml, CII)' : 'XRechnung (UBL 2.1)';
     $('#xml-dialog').showModal();
+  };
+  $('#export-format').onchange = (e) => {
+    exportFormat = e.target.value;
+    localStorage.setItem(FORMAT_KEY, exportFormat);
+    refresh();
+  };
+  $('#pdf-source').onchange = refresh;
+  $('#btn-add-allowance').onclick = () => {
+    const a = emptyAllowance(false);
+    const l = inv.lines[0];
+    if (l) { a.vatCategory = l.vatCategory; a.vatRate = l.vatRate; }
+    inv.allowances.push(a);
+    renderAllowances();
+    refresh();
+  };
+  $('#btn-add-charge').onclick = () => {
+    const a = emptyAllowance(true);
+    const l = inv.lines[0];
+    if (l) { a.vatCategory = l.vatCategory; a.vatRate = l.vatRate; }
+    inv.allowances.push(a);
+    renderAllowances();
+    refresh();
   };
   $('#btn-close-dialog').onclick = () => $('#xml-dialog').close();
   $('#btn-copy').onclick = () => navigator.clipboard?.writeText($('#xml-output').textContent);

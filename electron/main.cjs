@@ -75,7 +75,9 @@ function createWindow() {
       defaultPath: path.join(app.getPath('documents'), item.getFilename()),
       filters: item.getFilename().endsWith('.xml')
         ? [{ name: 'XRechnung (XML)', extensions: ['xml'] }]
-        : [{ name: 'Textdatei', extensions: ['txt'] }],
+        : item.getFilename().endsWith('.pdf')
+          ? [{ name: 'ZUGFeRD-Rechnung (PDF)', extensions: ['pdf'] }]
+          : [{ name: 'Textdatei', extensions: ['txt'] }],
     });
   });
 

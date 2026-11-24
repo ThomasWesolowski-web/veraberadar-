@@ -117,6 +117,11 @@ export function itemsToLines(items, pageWidth = 595) {
   });
 }
 
+/** Fügt die Zeilen mehrerer Seiten zu einem Text zusammen (Seitenwechsel = \f). */
+export function pagesToText(pageLines) {
+  return pageLines.map((l) => l.join('\n')).join('\n\f\n');
+}
+
 // ----------------------------------------------------------------- Positionen
 
 const POS = String.raw`\d{1,3}(?:\.\d{1,3}){0,3}`;
@@ -239,13 +244,27 @@ function parseLineItems(lines, boilerplate) {
   return items;
 }
 
-/** Zeilen, die auf mehreren Seiten wiederkehren (Kopf-/Fußzeilen) */
-function findBoilerplate(lines) {
+const FOOTER_HINT = /IBAN|BIC|SWIFT|USt|Steuer|St\.?-?Nr|Bank|Sparkasse|Finanzamt|Amtsgericht|Registergericht|HRB|HRA|Geschäftsführ|Inhaber|Vorstand|@|Tel\.?|Telefon|Fax|Mobil|www\.|https?:|KONTAKT|Seite\s+\d+|Sitz\b/i;
+
+/** Seitenweise Kopf- und Fußzeilen ermitteln. pages = Array von Zeilenarrays (normalisiert). */
+function findBoilerplate(pages) {
+  const set = new Set();
   const count = new Map();
-  for (const l of lines) count.set(l, (count.get(l) || 0) + 1);
-  const pages = Math.max(1, lines.filter((l) => /Seite\s+\d+\s+von\s+\d+/i.test(l)).length);
-  const min = pages >= 3 ? 3 : 2;
-  return new Set([...count].filter(([l, c]) => c >= min && l.length > 3 && !/^\d+(?:[.,]\d+)?$/.test(l)).map(([l]) => l));
+  for (const pg of pages) {
+    // Fußbereich: von unten, solange typische Fußzeilen-Inhalte vorkommen
+    for (let i = pg.length - 1; i >= 0 && i >= pg.length - 10; i--) {
+      if (FOOTER_HINT.test(pg[i])) set.add(pg[i]);
+      else break;
+    }
+    // Kopfbereich mit Seitenangabe
+    for (let i = 0; i < Math.min(3, pg.length); i++) {
+      if (/Seite\s+\d+\s*(?:von|\/)\s*\d+/i.test(pg[i])) set.add(pg[i]);
+    }
+    for (const l of new Set(pg)) count.set(l, (count.get(l) || 0) + 1);
+  }
+  // Zeilen, die auf mehreren Seiten wiederkehren und Fußzeilen-Inhalte haben
+  for (const [l, c] of count) if (c >= 2 && FOOTER_HINT.test(l) && pages.length > 1) set.add(l);
+  return set;
 }
 
 // ----------------------------------------------------------------- Adressen
@@ -287,7 +306,8 @@ export function parseInvoiceText(text) {
   // linke Spalte (für Anschriften): rechte Randspalten wie Slogans/Briefkopf entfernen
   const leftLines = rawLines.map((l) => l.split('\t')[0].replace(/\s+/g, ' ').trim()).filter(Boolean);
   const all = lines.join('\n');
-  const boilerplate = findBoilerplate(lines);
+  const pages = String(text || '').split('\f').map((pg) => pg.split(/\r?\n/).map((l) => l.replace(/\s+/g, ' ').trim()).filter(Boolean));
+  const boilerplate = findBoilerplate(pages);
 
   // Rechnungsart
   if (/(?:^|\n)\s*Schlussrechnung\b/i.test(all)) { inv.type = '877'; found.push('Rechnungsart: Schlussrechnung'); }
@@ -462,6 +482,22 @@ export function parseInvoiceText(text) {
     if (start > 0) hint = hint.slice(start);
     inv.note = hint.replace(/^(?:Wichtiger\s+)?Hinweis:\s*/i, '').trim();
     found.push('Hinweis § 14b UStG');
+  }
+
+  // Schluss-/Abschlagsrechnung: Übersicht der Abschläge und Zahlungen (§ 14 Abs. 5 UStG) übernehmen
+  const ovStart = lines.findIndex((l) => /^(Abzüglich|abzgl\.?)\s+(der\s+)?(bereits|erhaltene|geleistete)|^Übersicht der bisher/i.test(l));
+  if (ovStart >= 0) {
+    const block = [];
+    for (let i = ovStart; i < lines.length && block.length < 40; i++) {
+      const l = lines[i];
+      if (boilerplate.has(l) || /§\s*14b|Wichtiger Hinweis|aufzubewahren|^Soweit Sie/i.test(l)) continue;
+      if (/^(Zu zahlender Betrag|Skontoziel|Bei Zahlung|Nettozahlungsziel|Bitte zahlen)/i.test(l)) break;
+      block.push(l);
+    }
+    if (block.length) {
+      inv.note = [inv.note, 'Abrechnung der Abschlagsrechnungen und Zahlungen:', ...block].filter(Boolean).join('\n');
+      found.push('Übersicht Abschläge/Zahlungen');
+    }
   }
 
   // Positionen

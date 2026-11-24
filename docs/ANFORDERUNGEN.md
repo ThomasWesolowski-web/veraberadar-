@@ -97,13 +97,16 @@ Dazu kommen die EN-16931-Kernregeln (z. B. Rechenregeln BR-CO-*, Steuerkategorie
 
 ## 7. Umsetzung im Tool
 
-- Ausgabeformat: **XRechnung 3.0, Syntax UBL 2.1** (`Invoice`, bei 381 `CreditNote`)
+- Ausgabeformate (auswählbar):
+  - **XRechnung 3.0, Syntax UBL 2.1** (`Invoice`, bei 381 `CreditNote`)
+  - **ZUGFeRD 2.3 / Factur-X** in den Profilen **EN 16931** und **XRECHNUNG**: PDF/A-3 mit eingebetteter `factur-x.xml` (CII D16B, AFRelationship „Alternative“, XMP-Metadaten mit Factur-X-Erweiterungsschema, sRGB-OutputIntent). Beide Profile gelten nach § 14 UStG als E-Rechnung; MINIMUM und BASIC-WL werden bewusst nicht angeboten.
   - CustomizationID: `urn:cen.eu:en16931:2017#compliant#urn:xeinkauf.de:kosit:xrechnung_3.0`
   - ProfileID: `urn:fdc:peppol.eu:2017:poacc:billing:01:1.0`
 - Eingang:
   - **PDF:** Eine eingebettete ZUGFeRD-, Factur-X- oder XRechnung-XML wird verlustfrei übernommen. Sonst wird der Text ausgewertet und das Original-PDF optional als Anlage (BT-125) eingebettet.
   - **XML:** XRechnung (UBL oder CII) bzw. ZUGFeRD/Factur-X (CII)
-- Der Export ist gesperrt, solange Fehler bestehen.
+- Der Export ist gesperrt, solange Fehler bestehen. Beim ZUGFeRD-Profil EN 16931 gelten die XRechnung-Zusatzregeln (BR-DE) nur als Hinweise.
+- **Schluss- und Abschlagsrechnungen** (§ 14 Abs. 5 UStG): Rechnungsarten 875/876/877, bereits gezahlte Beträge als BT-113. Die Übersicht der Abschläge mit Entgelt und Steuer wird in der Bemerkung (BT-22) übermittelt. Skonto kann mit Basisbetrag angegeben werden (`#BASISBETRAG=…#`).
 - Empfehlung: Die fertige Datei zusätzlich mit dem offiziellen **KoSIT-Validator** prüfen.
 
 ## Quellen

@@ -3,6 +3,7 @@
 //   deps = { PDFLib, fontkit, fontRegular, fontBold, icc }  (Schrift-/ICC-Daten als Uint8Array)
 import { computeTotals, lineNet, num, INVOICE_TYPES, PAYMENT_MEANS, paymentTermsText } from './model.js';
 import { buildCii, ZUGFERD_PROFILES } from './cii.js';
+import { removePdfEncryption } from './pdf-decrypt.js';
 
 export const ZUGFERD_FILENAME = 'factur-x.xml';
 
@@ -406,16 +407,11 @@ export async function buildZugferdPdf(inv, { profile = 'EN16931', sourcePdf = nu
   const xml = buildCii(inv, profile);
   let doc;
   let usedSource = false;
+  let decrypted = false;
   if (sourcePdf) {
-    try {
-      doc = await PDFLib.PDFDocument.load(sourcePdf, { updateMetadata: false });
-      usedSource = true;
-    } catch (e) {
-      if (/encrypt/i.test(String(e?.message || e))) {
-        throw new Error('Die Original-PDF ist verschlüsselt/geschützt und kann nicht erweitert werden. Bitte „PDF neu erzeugen" wählen.');
-      }
-      throw e;
-    }
+    doc = await PDFLib.PDFDocument.load(sourcePdf, { updateMetadata: false, ignoreEncryption: true });
+    if (doc.isEncrypted) decrypted = await removePdfEncryption(doc, PDFLib);
+    usedSource = true;
   } else {
     doc = await renderInvoicePdf(inv, deps);
   }
@@ -425,7 +421,7 @@ export async function buildZugferdPdf(inv, { profile = 'EN16931', sourcePdf = nu
     title: `${TITLES[inv.type] || 'Rechnung'} ${inv.number}`,
   });
   const bytes = await doc.save({ useObjectStreams: false });
-  return { bytes, xml, usedSource };
+  return { bytes, xml, usedSource, decrypted };
 }
 
 export function zugferdFilename(inv) {

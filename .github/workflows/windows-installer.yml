@@ -21,6 +21,11 @@ jobs:
         run: npm ci
       - name: Tests
         run: npm test
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Offizielle Prüfung (EN 16931, XRechnung, CII-Schema)
+        run: tools/official-validation.sh
       - name: Installer bauen
         run: npm run dist:win
       - name: Installer bereitstellen

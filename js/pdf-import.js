@@ -2,7 +2,7 @@
 // 1. Eingebettete E-Rechnung (ZUGFeRD / Factur-X / XRechnung) wird bevorzugt übernommen.
 // 2. Sonst wird der Text extrahiert und heuristisch ausgewertet.
 import * as pdfjsLib from '../vendor/pdfjs/pdf.min.mjs';
-import { parseInvoiceText, itemsToLines } from './pdf-text.js';
+import { parseInvoiceText, itemsToLines, pagesToText } from './pdf-text.js';
 import { importXml } from './xml-import.js';
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = new URL('../vendor/pdfjs/pdf.worker.min.mjs', import.meta.url).href;
@@ -58,9 +58,9 @@ export async function importPdf(buffer, filename) {
     const page = await pdf.getPage(i);
     const content = await page.getTextContent();
     const { width } = page.getViewport({ scale: 1 });
-    allLines.push(...itemsToLines(content.items, width));
+    allLines.push(itemsToLines(content.items, width));
   }
-  const text = allLines.join('\n');
+  const text = pagesToText(allLines);
   if (text.replace(/\s/g, '').length < 30) {
     return {
       source: 'PDF ohne Textebene',

@@ -79,3 +79,101 @@ test('erkennt Reverse Charge und Kleinunternehmer', () => {
   assert.equal(ku.lines[0].vatCategory, 'E');
   assert.equal(ku.lines[0].price, 300);
 });
+
+// Erfundene Schlussrechnung im Aufbau typischer Handwerker-Software (mehrseitig, Fuß nur auf Seite 1 und letzter Seite)
+const FOOT = [
+  'BANKVERBINDUNG\tSTEUERNUMMER\tKONTAKT',
+  'Sparkasse Musterstadt\tFinanzamt Musterstadt\tMuster Bau GmbH',
+  'BIC COBADEFFXXX\tSt-Nr.: 12345/67890\tIndustriestr. 5, 70173 Stuttgart',
+  'IBAN DE89 3704 0044 0532 0130 00\tUSt-IdNr.: DE136695976\t0711 / 12 34 56',
+  '\tinfo@muster-bau.example',
+];
+const SCHLUSS = [
+  [
+    'Muster Bau GmbH + Industriestr. 5 + 70173 Stuttgart',
+    'Herrn\t\tQualität.',
+    'Max Beispiel\tHandwerk.',
+    'Gartenweg 7',
+    '71034 Böblingen\tService.',
+    '\tKundennummer: 4711',
+    '\tProjektnummer: P-2026-9',
+    'Schlussrechnung\t3. November 2026',
+    'Nr. : 2611001',
+    'Die Leistung wurde am 30.10.2026 erbracht.',
+    'Pos Menge Einh. Leistung EP [EUR] GP [EUR]',
+    'Titel 01 Putzarbeiten',
+    '01.1 120,50 m² Abdecken von empfindlichen 2,00 241,00',
+    'Bauteilen',
+    'Abdecken von empfindlichen Bauteilen mit Folie.',
+    '01.2 85,00 m² Gipsputz Q2 einlagig, 15 mm, inkl. Eckschutz,',
+    'maschinell aufgetragen und geglättet.',
+    '16,40 1.394,00',
+    ...FOOT,
+  ],
+  [
+    '[Schlussrechnung 2611001] - Seite 2 von 2',
+    'Pos Menge Einh. Leistung EP [EUR] GP [EUR]',
+    '01.2 (Fortsetzung) Oberfläche Q2 nach Merkblatt.',
+    '01.02.3 2,50 lfm Anschlussfuge 4,40 11,00',
+    '02.1 12,00 h Facharbeiter 55,00 660,00',
+    '02.2 1,000 t Bauschutt gemischt 150,00 150,00',
+    'Titelzusammenstellung :',
+    '01 Putzarbeiten 1.646,00',
+    'Zwischensumme = EUR 2.456,00',
+    'Rabatt -3,00 % EUREUR -73,68',
+    'Nettosumme = EUR 2.382,32',
+    'USt 19,00% + EUR 452,64',
+    'Bruttosumme = EUR 2.834,96',
+    'Wichtiger Hinweis: Soweit Sie unsere Leistungen als Nichtunternehmer bezogen haben, sind Sie gemäß §14b Abs.1 Satz 5 UStG',
+    'verpflichtet, diese Rechnung zwei Jahre aufzubewahren.',
+    'Übersicht der bisher erhaltenen Zahlungen:',
+    'Rech.Nr. Datum Netto USt Brutto',
+    '2610001 15.10.2026 1.000,00 190,00 EUR 1.190,00',
+    'Summe Zahlungen: 1.000,00 190,00 EUR 1.190,00',
+    'Zu zahlender Betrag: EUR 1.644,96',
+    'Bei Zahlung bis zum 10.11.2026 abzüglich 2,00% Skonto [Sk.: 32,90 EUR - Zahlbetrag: 1.612,06 EUR]',
+    'Nettozahlungsziel: 17.11.2026',
+    ...FOOT,
+  ],
+].map((p) => p.join('\n')).join('\n\f\n');
+
+test('mehrseitige Schlussrechnung mit Langtexten, Rabatt, Abschlägen und Skonto', async () => {
+  const { computeTotals } = await import('../js/model.js');
+  const { invoice: inv, warnings } = parseInvoiceText(SCHLUSS);
+  assert.deepEqual(warnings, []);
+  assert.equal(inv.type, '877');
+  assert.equal(inv.number, '2611001');
+  assert.equal(inv.issueDate, '2026-11-03');
+  assert.equal(inv.deliveryDate, '2026-10-30');
+  assert.equal(inv.dueDate, '2026-11-17');
+  assert.equal(inv.buyer.id, '4711');
+  assert.equal(inv.projectReference, 'P-2026-9');
+  assert.equal(inv.buyerReference, 'P-2026-9');
+  assert.deepEqual([inv.seller.name, inv.seller.street, inv.seller.zip, inv.seller.city],
+    ['Muster Bau GmbH', 'Industriestr. 5', '70173', 'Stuttgart']);
+  assert.deepEqual([inv.buyer.name, inv.buyer.street, inv.buyer.zip, inv.buyer.city],
+    ['Max Beispiel', 'Gartenweg 7', '71034', 'Böblingen']);
+  assert.equal(inv.seller.taxNumber, '12345/67890');
+  assert.equal(inv.seller.vatId, 'DE136695976');
+  assert.equal(inv.payment.iban, 'DE89370400440532013000');
+  assert.deepEqual(inv.lines.map((l) => [l.articleNo, l.quantity, l.unit, l.price]), [
+    ['01.1', 120.5, 'MTK', 2], ['01.2', 85, 'MTK', 16.4], ['01.02.3', 2.5, 'MTR', 4.4],
+    ['02.1', 12, 'HUR', 55], ['02.2', 1, 'TNE', 150],
+  ]);
+  assert.equal(inv.lines[0].name, 'Abdecken von empfindlichen Bauteilen');
+  assert.match(inv.lines[1].description, /maschinell aufgetragen[\s\S]*Oberfläche Q2 nach Merkblatt/);
+  for (const l of inv.lines) assert.doesNotMatch(l.description, /BANKVERBINDUNG|IBAN|Seite 2/);
+  assert.equal(inv.allowances.length, 1);
+  assert.equal(inv.allowances[0].percent, '3');
+  const t = computeTotals(inv);
+  assert.equal(t.lineTotal, 2456);
+  assert.equal(t.taxExclusive, 2382.32);
+  assert.equal(t.taxTotal, 452.64);
+  assert.equal(t.taxInclusive, 2834.96);
+  assert.equal(t.payable, 1644.96);
+  assert.equal(inv.payment.skontoDays, '7');
+  assert.equal(inv.payment.skontoPercent, '2');
+  assert.equal(inv.payment.skontoBase, ''); // Skonto bezieht sich auf den Zahlbetrag
+  assert.match(inv.note, /^Soweit Sie unsere Leistungen[\s\S]*aufzubewahren\./);
+  assert.match(inv.note, /Summe Zahlungen: 1\.000,00 190,00 EUR 1\.190,00/);
+});
